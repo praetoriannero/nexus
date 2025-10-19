@@ -16,12 +16,12 @@ static IPV4_DST_ADDR_OFFSET: usize = 16;
 static IPV4_OPT_OFFSET: usize = 20;
 static IPV4_HEADER_LEN: usize = 20;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 struct IpOptionHeader {
     opt: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct IpOption<'a> {
     bytes: &'a [u8],
     pub pdu_chain: Option<Vec<&'a Pdu<'a>>>,
@@ -38,7 +38,7 @@ impl<'a> IpOption<'a> {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 struct IpHeader {
     vihl: u8,
     tos: u8,
@@ -52,7 +52,7 @@ struct IpHeader {
     dst_addr: [u8; 4],
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ip<'a> {
     bytes: &'a [u8],
     header: IpHeader,
@@ -67,6 +67,9 @@ impl<'a> Serialize<'a> for Ip<'a> {
     fn finalize(&'a mut self) {
         // TODO: need to calculate checksum here
         ()
+    }
+    fn to_bytes(&self) -> Vec<u8> {
+        vec![0; IPV4_HEADER_LEN as usize]
     }
 }
 

@@ -33,6 +33,10 @@ where
     }
 }
 
+pub fn write_bytes<T>(value: T, endian: Endian) -> Vec<u8> {
+    Vec::new()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

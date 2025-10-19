@@ -1,6 +1,6 @@
 use crate::ip::Ip;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Pdu<'a> {
     Ip(Ip<'a>),
 }
@@ -13,4 +13,7 @@ pub trait Deserialize<'a> {
 
 pub trait Serialize<'a> {
     fn finalize(&'a mut self);
+    fn to_bytes(&self) -> Vec<u8>
+    where
+        Self: Sized;
 }

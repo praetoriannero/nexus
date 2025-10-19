@@ -1,4 +1,4 @@
-use crate::pdu::Pdu;
+use crate::pdu::{Deserialize, Pdu, Serialize};
 use crate::utils::parse_bytes;
 
 static ETH_DST_OFFSET: usize = 0;
@@ -6,14 +6,29 @@ static ETH_SRC_OFFSET: usize = 6;
 static ETH_TYPE_OFFSET: usize = 12;
 static ETH_HEADER_LEN: usize = 14;
 
-#[derive(Debug)]
-struct EthernetHeader {
-    dst_addr: [u8; 6],
-    src_addr: [u8; 6],
-    ether_type: u16,
+#[derive(Debug, Clone, Copy)]
+pub struct MacAddress {
+    address: [u8; 6],
 }
 
-#[derive(Debug)]
+impl MacAddress {
+    pub fn from_bytes(bytes: [u8; 6]) -> Self {
+        Self { address: bytes }
+    }
+
+    pub fn to_bytes(&self) -> [u8; 6] {
+        self.address.clone()
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct EthernetHeader {
+    pub dst_addr: MacAddress,
+    pub src_addr: MacAddress,
+    pub ether_type: u16,
+}
+
+#[derive(Debug, Clone)]
 pub struct Ethernet<'a> {
     bytes: Option<&'a [u8]>,
     header: Option<EthernetHeader>,
@@ -23,8 +38,18 @@ pub struct Ethernet<'a> {
     pub parent_pdu: Option<&'a Pdu<'a>>,
 }
 
-impl<'a> Ethernet<'a> {
-    pub fn from_bytes(bytes: &'a [u8], pdu_chain: Option<Vec<&'a Pdu>>) -> Option<Self> {
+impl<'a> Serialize<'a> for Ethernet<'a> {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(ETH_HEADER_LEN);
+        bytes.extend(self.header.unwrap().clone().dst_addr.to_bytes());
+        bytes
+    }
+
+    fn finalize(&'a mut self) {}
+}
+
+impl<'a> Deserialize<'a> for Ethernet<'a> {
+    fn from_bytes(bytes: &'a [u8], pdu_chain: Option<Vec<&'a Pdu>>) -> Option<Self> {
         if bytes.len() < ETH_HEADER_LEN {
             return None;
         }
@@ -38,7 +63,9 @@ impl<'a> Ethernet<'a> {
             parent_pdu: None,
         })
     }
+}
 
+impl<'a> Ethernet<'a> {
     pub fn dst_addr(&self) -> &[u8] {
         &self.bytes.unwrap()[ETH_DST_OFFSET..ETH_SRC_OFFSET]
     }
@@ -54,7 +81,7 @@ impl<'a> Ethernet<'a> {
         )
     }
 
-    pub fn new(dst_addr: &[u8; 6], src_addr: &[u8; 6], ether_type: u16) -> Self {
+    pub fn new(dst_addr: MacAddress, src_addr: MacAddress, ether_type: u16) -> Self {
         Self {
             bytes: None,
             parent_pdu: None,
@@ -62,8 +89,8 @@ impl<'a> Ethernet<'a> {
             pdu_chain: None,
             data: None,
             header: Some(EthernetHeader {
-                dst_addr: *dst_addr,
-                src_addr: *src_addr,
+                dst_addr: dst_addr,
+                src_addr: src_addr,
                 ether_type: ether_type,
             }),
         }
