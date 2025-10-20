@@ -1,4 +1,5 @@
-use crate::pdu::{Deserialize, Pdu, Serialize};
+use crate::error::ParseError;
+use crate::pdu::Pdu;
 use crate::utils::{Endian, parse_bytes};
 use std::net::Ipv4Addr;
 
@@ -16,23 +17,21 @@ static IPV4_DST_ADDR_OFFSET: usize = 16;
 static IPV4_OPT_OFFSET: usize = 20;
 static IPV4_HEADER_LEN: usize = 20;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 struct IpOptionHeader {
     opt: u32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct IpOption<'a> {
     bytes: &'a [u8],
-    pub pdu_chain: Option<Vec<&'a Pdu<'a>>>,
     header: IpOptionHeader,
 }
 
 impl<'a> IpOption<'a> {
-    pub fn from_bytes(bytes: &'a [u8], pdu_chain: Option<Vec<&'a Pdu>>) -> Self {
+    pub fn from_bytes(bytes: &'a [u8]) -> Self {
         Self {
             bytes,
-            pdu_chain,
             header: IpOptionHeader::default(),
         }
     }
@@ -57,36 +56,24 @@ pub struct Ip<'a> {
     bytes: &'a [u8],
     header: IpHeader,
     opts: Vec<IpOption<'a>>,
-    pub pdu_chain: Option<Vec<&'a Pdu<'a>>>,
     pub data: Option<&'a [u8]>,
-    pub child_pdu: Option<&'a Pdu<'a>>,
-    pub parent_pdu: Option<&'a Pdu<'a>>,
 }
 
-impl<'a> Serialize<'a> for Ip<'a> {
-    fn finalize(&'a mut self) {
-        // TODO: need to calculate checksum here
-        ()
+impl<'a> Pdu<'a> for Ip<'a> {
+    fn to_bytes(&self) -> Result<Vec<u8>, ParseError> {
+        Ok(vec![0; IPV4_HEADER_LEN as usize])
     }
-    fn to_bytes(&self) -> Vec<u8> {
-        vec![0; IPV4_HEADER_LEN as usize]
-    }
-}
 
-impl<'a> Deserialize<'a> for Ip<'a> {
-    fn from_bytes(bytes: &'a [u8], pdu_chain: Option<Vec<&'a Pdu>>) -> Option<Self> {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
         if bytes.len() < IPV4_HEADER_LEN {
-            return None;
+            return Err(ParseError::NotEnoughData);
         }
 
-        Some(Self {
+        Ok(Self {
             bytes: &bytes[..std::mem::size_of::<IpHeader>()],
-            pdu_chain,
             opts: Vec::new(),
             data: Some(&bytes[std::mem::size_of::<IpHeader>()..]),
             header: IpHeader::default(),
-            child_pdu: None,
-            parent_pdu: None,
         })
     }
 }
@@ -192,66 +179,11 @@ impl<'a> Ip<'a> {
     //     protocol: u8,
     //     src_addr: u32,
     //     dst_addr: u32,
-    //     options: Option<IpOption>,
+    //     options: Option<Vec<IpOption>>,
     //     payload: Vec<u8>,
     // ) -> Self {
-    //     let vihl = (version << 4) | ihl;
-    //     buffer.push(vihl);
-    //     buffer.push(tos);
-    //     for idx in (0..2).rev() {
-    //         let temp = total_len >> (8 * idx);
-    //         buffer.push(temp as u8);
-    //     }
-    //     for idx in (0..2).rev() {
-    //         let temp = id >> (8 * idx);
-    //         buffer.push(temp as u8);
-    //     }
-    //     buffer.push(flags);
-    //     for idx in (0..2).rev() {
-    //         let temp = frag_offset >> (8 * idx);
-    //         buffer.push(temp as u8);
-    //     }
-    //     buffer.push(ttl);
-    //     buffer.push(protocol);
-    //     for _ in 0..2 {
-    //         // checksum
-    //         buffer.push(0);
-    //     }
-    //     for idx in (0..4).rev() {
-    //         let temp = src_addr >> (8 * idx);
-    //         buffer.push(temp as u8);
-    //     }
-    //     for idx in (0..4).rev() {
-    //         let temp = dst_addr >> (8 * idx);
-    //         buffer.push(temp as u8);
-    //     }
-    //     match options {
-    //         // TODO: do something with the options
-    //         Some(_) => (),
-    //         None => (),
-    //     }
-    //     buffer.extend(payload);
-    //     Self {
-    //         bytes: buffer,
-    //         // TODO: add pdu_chain
-    //         pdu_chain: None,
-    //         child_pdu: None,
-    //         data: &payload,
-    //         parent_pdu: None,
-    //     }
+    //     Self {}
     // }
-    // pub fn set_version(&'a mut self, version: u8) -> &'a Self {
-    //     self
-    // }
-    //
-    // pub fn set_ihl(&'a mut self, ihl: u8) -> &'a Self {
-    //     self
-    // }
-    //
-    // pub fn set_tos(&'a mut self, tos: u8) -> &'a Self {
-    //     self
-    // }
-    //
 }
 
 #[cfg(test)]
@@ -283,41 +215,41 @@ mod tests {
     ];
     #[test]
     fn test_ip_from_bytes() {
-        Ip::from_bytes(&IPV4_TCP_HELLO, None);
+        Ip::from_bytes(&IPV4_TCP_HELLO);
     }
 
     #[test]
     fn test_ip_get_version() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes, None).unwrap();
+        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap();
         assert!(ip_pdu.version() == 4);
     }
 
     #[test]
     fn test_ip_get_ihl() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes, None).unwrap();
+        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap();
         assert!(IPV4_HEADER_LEN == ip_pdu.ihl() as usize);
     }
 
     #[test]
     fn test_ip_get_tos() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes, None).unwrap();
+        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap();
         assert!(ip_pdu.tos() == 0x3c);
     }
 
     #[test]
     fn test_ip_get_dscp() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes, None).unwrap();
+        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap();
         assert!(ip_pdu.dscp() == 0x3);
     }
 
     #[test]
     fn test_ip_get_ecn() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes, None).unwrap();
+        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap();
         assert!(ip_pdu.ecn() == 0xc);
     }
 }

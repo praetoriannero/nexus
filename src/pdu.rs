@@ -1,19 +1,12 @@
-use crate::ip::Ip;
+use crate::error::ParseError;
 
-#[derive(Debug, Clone, Copy)]
-pub enum Pdu<'a> {
-    Ip(Ip<'a>),
-}
-
-pub trait Deserialize<'a> {
-    fn from_bytes(bytes: &'a [u8], pdu_chain: Option<Vec<&'a Pdu>>) -> Option<Self>
+pub trait Pdu<'a> {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError>
     where
         Self: Sized;
-}
-
-pub trait Serialize<'a> {
-    fn finalize(&'a mut self);
-    fn to_bytes(&self) -> Vec<u8>
+    fn to_bytes(&self) -> Result<Vec<u8>, ParseError>
     where
         Self: Sized;
+    // fn prepare(&'a mut self);
+    // fn finalize(&'a mut self);
 }

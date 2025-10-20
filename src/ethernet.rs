@@ -1,5 +1,7 @@
-use crate::pdu::{Deserialize, Pdu, Serialize};
+use crate::error::ParseError;
+use crate::pdu::Pdu;
 use crate::utils::parse_bytes;
+use std::mem;
 
 static ETH_DST_OFFSET: usize = 0;
 static ETH_SRC_OFFSET: usize = 6;
@@ -28,39 +30,40 @@ struct EthernetHeader {
     pub ether_type: u16,
 }
 
+impl EthernetHeader {
+    pub fn serialize(&self) -> Vec<u8> {
+        let mut result = Vec::with_capacity(mem::size_of::<EthernetHeader>());
+        result.extend(self.dst_addr.to_bytes());
+        result.extend(self.src_addr.to_bytes());
+        result.extend(self.ether_type.to_be_bytes());
+        result
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Ethernet<'a> {
     bytes: Option<&'a [u8]>,
     header: Option<EthernetHeader>,
-    pub pdu_chain: Option<Vec<&'a Pdu<'a>>>,
     pub data: Option<&'a [u8]>,
-    pub child_pdu: Option<&'a Pdu<'a>>,
-    pub parent_pdu: Option<&'a Pdu<'a>>,
 }
 
-impl<'a> Serialize<'a> for Ethernet<'a> {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(ETH_HEADER_LEN);
-        bytes.extend(self.header.unwrap().clone().dst_addr.to_bytes());
-        bytes
+impl<'a> Pdu<'a> for Ethernet<'a> {
+    fn to_bytes(&self) -> Result<Vec<u8>, ParseError> {
+        match self.header {
+            Some(header) => Ok(header.serialize()),
+            None => Err(ParseError::InvalidHeader),
+        }
     }
 
-    fn finalize(&'a mut self) {}
-}
-
-impl<'a> Deserialize<'a> for Ethernet<'a> {
-    fn from_bytes(bytes: &'a [u8], pdu_chain: Option<Vec<&'a Pdu>>) -> Option<Self> {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
         if bytes.len() < ETH_HEADER_LEN {
-            return None;
+            return Err(ParseError::NotEnoughData);
         }
 
-        Some(Self {
+        Ok(Self {
             bytes: Some(&bytes[..ETH_HEADER_LEN]),
             header: None,
-            pdu_chain,
             data: Some(&bytes[ETH_HEADER_LEN..]),
-            child_pdu: None,
-            parent_pdu: None,
         })
     }
 }
@@ -70,8 +73,16 @@ impl<'a> Ethernet<'a> {
         &self.bytes.unwrap()[ETH_DST_OFFSET..ETH_SRC_OFFSET]
     }
 
+    pub fn set_dst_addr(&mut self, dst_addr: MacAddress) {
+        self.header.unwrap().dst_addr = dst_addr;
+    }
+
     pub fn src_addr(&self) -> &[u8] {
         &self.bytes.unwrap()[ETH_SRC_OFFSET..ETH_TYPE_OFFSET]
+    }
+
+    pub fn set_src_addr(&mut self, src_addr: MacAddress) {
+        self.header.unwrap().src_addr = src_addr;
     }
 
     pub fn ether_type(&self) -> u16 {
@@ -81,13 +92,19 @@ impl<'a> Ethernet<'a> {
         )
     }
 
-    pub fn new(dst_addr: MacAddress, src_addr: MacAddress, ether_type: u16) -> Self {
+    pub fn set_ether_type(&mut self, ether_type: u16) {
+        self.header.unwrap().ether_type = ether_type;
+    }
+
+    pub fn new(
+        dst_addr: MacAddress,
+        src_addr: MacAddress,
+        ether_type: u16,
+        data: Option<&'a [u8]>,
+    ) -> Self {
         Self {
             bytes: None,
-            parent_pdu: None,
-            child_pdu: None,
-            pdu_chain: None,
-            data: None,
+            data,
             header: Some(EthernetHeader {
                 dst_addr: dst_addr,
                 src_addr: src_addr,
