@@ -7,6 +7,11 @@ pub enum ParseError {
     InvalidHeader,
 }
 
+#[derive(Debug)]
+pub enum AllocError {
+    InsufficientSpace,
+}
+
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "pdu parsing failed")
@@ -14,3 +19,11 @@ impl fmt::Display for ParseError {
 }
 
 impl Error for ParseError {}
+
+impl fmt::Display for AllocError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "insufficient space")
+    }
+}
+
+impl Error for AllocError {}

@@ -7,6 +7,4 @@ pub trait Pdu<'a> {
     fn to_bytes(&self) -> Result<Vec<u8>, ParseError>
     where
         Self: Sized;
-    // fn prepare(&'a mut self);
-    // fn finalize(&'a mut self);
 }

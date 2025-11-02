@@ -17,7 +17,7 @@ static IPV4_DST_ADDR_OFFSET: usize = 16;
 static IPV4_OPT_OFFSET: usize = 20;
 static IPV4_HEADER_LEN: usize = 20;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 struct IpOptionHeader {
     opt: u32,
 }
@@ -32,12 +32,12 @@ impl<'a> IpOption<'a> {
     pub fn from_bytes(bytes: &'a [u8]) -> Self {
         Self {
             bytes,
-            header: IpOptionHeader::default(),
+            header: IpOptionHeader { opt: 0 },
         }
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 struct IpHeader {
     vihl: u8,
     tos: u8,
@@ -47,16 +47,20 @@ struct IpHeader {
     ttl: u8,
     proto: u8,
     checksum: u16,
-    src_addr: [u8; 4],
-    dst_addr: [u8; 4],
+    src_addr: Ipv4Addr,
+    dst_addr: Ipv4Addr,
 }
 
 #[derive(Debug, Clone)]
 pub struct Ip<'a> {
     bytes: &'a [u8],
-    header: IpHeader,
+    header: Option<IpHeader>,
     opts: Vec<IpOption<'a>>,
-    pub data: Option<&'a [u8]>,
+    pub data: &'a [u8],
+}
+
+fn get_ip_header_len<'a>(ip_header_bytes: &'a [u8]) -> usize {
+    (ip_header_bytes[IPV4_VERSION_OFFSET] & 0xF) as usize * IPV4_BYTE_MULTIPLE
 }
 
 impl<'a> Pdu<'a> for Ip<'a> {
@@ -69,12 +73,19 @@ impl<'a> Pdu<'a> for Ip<'a> {
             return Err(ParseError::NotEnoughData);
         }
 
-        Ok(Self {
-            bytes: &bytes[..std::mem::size_of::<IpHeader>()],
+        let header_len = get_ip_header_len(&bytes[..IPV4_HEADER_LEN]);
+        if header_len < bytes.len() {
+            return Err(ParseError::NotEnoughData);
+        }
+
+        let result = Self {
+            bytes: &bytes[..header_len],
             opts: Vec::new(),
-            data: Some(&bytes[std::mem::size_of::<IpHeader>()..]),
-            header: IpHeader::default(),
-        })
+            data: &bytes[header_len..],
+            header: None,
+        };
+
+        Ok(result)
     }
 }
 
@@ -215,7 +226,7 @@ mod tests {
     ];
     #[test]
     fn test_ip_from_bytes() {
-        Ip::from_bytes(&IPV4_TCP_HELLO);
+        Ip::from_bytes(&IPV4_TCP_HELLO).unwrap();
     }
 
     #[test]
