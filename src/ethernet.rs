@@ -28,6 +28,10 @@ impl<'a> MacAddress<'a> {
         })
     }
 
+    pub fn parse_into(&self, arena: &mut Arena) -> Result<(), AllocError> {
+        Ok(())
+    }
+
     pub fn into_buff(&self, buff: &mut [u8]) -> Result<(), std::array::TryFromSliceError> {
         self.address.clone_into(buff.try_into()?);
         Ok(())
@@ -85,7 +89,7 @@ impl<'a> EthernetHeader<'a> {
         page[ETH_SRC_OFFSET..ETH_HEADER_LEN].copy_from_slice(&ether_type.to_be_bytes());
         Ok(Self {
             // I think we want something like &arena[page.1..page.2]
-            bytes: (*page).try_into().expect("err"),
+            bytes: page,
         })
     }
 

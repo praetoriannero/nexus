@@ -1,3 +1,6 @@
+// TODO: https://stackoverflow.com/questions/57203009/implementing-slice-for-custom-type
+// This is so we can index into the arena when parsing types into arenas
+
 struct AllocError {}
 
 pub struct Arena {
