@@ -1,7 +1,8 @@
-use crate::arena::Arena;
-use crate::error::{AllocError, ParseError};
+use crate::error::ParseError;
 use crate::pdu::Pdu;
 use crate::utils::parse_bytes;
+
+use std::borrow::Cow;
 
 const ETH_DST_OFFSET: usize = 0;
 const ETH_SRC_OFFSET: usize = 6;
@@ -15,23 +16,6 @@ pub struct MacAddress<'a> {
 }
 
 impl<'a> MacAddress<'a> {
-    pub fn from_bytes_into(
-        bytes: [u8; MAC_ADDR_SIZE],
-        arena: &'a mut Arena,
-    ) -> Result<Self, AllocError> {
-        let Some(buff) = arena.alloc(MAC_ADDR_SIZE) else {
-            return Err(AllocError::InsufficientSpace);
-        };
-        buff.clone_from_slice(&bytes[..]);
-        Ok(Self {
-            address: (*buff).try_into().expect("error during clone"),
-        })
-    }
-
-    pub fn parse_into(&self, arena: &mut Arena) -> Result<(), AllocError> {
-        Ok(())
-    }
-
     pub fn into_buff(&self, buff: &mut [u8]) -> Result<(), std::array::TryFromSliceError> {
         self.address.clone_into(buff.try_into()?);
         Ok(())
@@ -46,85 +30,12 @@ impl<'a> MacAddress<'a> {
     pub fn to_bytes(&self) -> [u8; 6] {
         self.address.clone()
     }
-
-    pub fn from_str(
-        string: &str,
-        arena: &'a mut Arena,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let mut temp: Vec<u8> = Vec::new();
-        for oct in string.split(":") {
-            temp.push(oct.parse()?);
-        }
-        MacAddress::from_bytes_into(temp.try_into().expect("error during clone"), arena)
-            .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)
-    }
-
-    pub fn new(addr: &'a [u8; 6]) -> Self {
-        Self { address: addr }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct EthernetHeader<'a> {
-    bytes: &'a [u8],
-}
-
-impl<'a> EthernetHeader<'a> {
-    pub fn from_bytes(bytes: &'a [u8]) -> Self {
-        Self { bytes }
-    }
-
-    pub fn new(
-        dst_addr: MacAddress,
-        src_addr: MacAddress,
-        ether_type: u16,
-        arena: &'a mut Arena,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let Some(page) = &mut arena.alloc(ETH_HEADER_LEN) else {
-            return Err(Box::new(AllocError::InsufficientSpace) as Box<dyn std::error::Error>);
-        };
-        // Instead of writing to page, we could write directly to arena
-        dst_addr.into_buff(&mut page[..ETH_DST_OFFSET])?;
-        src_addr.into_buff(&mut page[ETH_DST_OFFSET..ETH_SRC_OFFSET])?;
-        page[ETH_SRC_OFFSET..ETH_HEADER_LEN].copy_from_slice(&ether_type.to_be_bytes());
-        Ok(Self {
-            // I think we want something like &arena[page.1..page.2]
-            bytes: page,
-        })
-    }
-
-    pub fn dst_addr(&self) -> MacAddress {
-        MacAddress::from_bytes(&self.bytes[ETH_DST_OFFSET..ETH_SRC_OFFSET])
-    }
-
-    pub fn set_dst_addr(&mut self, _addr: &[u8]) -> &mut Self {
-        self
-    }
-
-    pub fn src_addr(&self) -> MacAddress {
-        MacAddress::from_bytes(&self.bytes[ETH_SRC_OFFSET..ETH_TYPE_OFFSET])
-    }
-
-    pub fn set_src_addr(&mut self, _addr: &[u8]) -> &mut Self {
-        self
-    }
-
-    pub fn ether_type(&self) -> u16 {
-        parse_bytes::<u16>(
-            &self.bytes[ETH_TYPE_OFFSET..ETH_HEADER_LEN],
-            crate::utils::Endian::Little,
-        )
-    }
-
-    pub fn set_ether_type(&mut self, _ether_type: u16) -> &mut Self {
-        self
-    }
 }
 
 #[derive(Debug)]
 pub struct Ethernet<'a> {
-    header: EthernetHeader<'a>,
-    pub data: &'a [u8],
+    header: Cow<'a, [u8]>,
+    data: Cow<'a, [u8]>,
 }
 
 impl<'a> Pdu<'a> for Ethernet<'a> {
@@ -138,47 +49,71 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
         }
 
         Ok(Self {
-            header: EthernetHeader::from_bytes(bytes),
-            data: &bytes[ETH_HEADER_LEN..],
+            header: Cow::Borrowed(&bytes[..ETH_HEADER_LEN]),
+            data: Cow::Borrowed(&bytes[ETH_HEADER_LEN..]),
         })
     }
 }
 
 impl<'a> Ethernet<'a> {
-    pub fn dst_addr(&self) -> MacAddress {
-        self.header.dst_addr()
+    pub fn new() -> Self {
+        Self {
+            header: Cow::Owned(Vec::with_capacity(ETH_HEADER_LEN)),
+            data: Cow::Owned(Vec::new()),
+        }
     }
 
-    pub fn set_dst_addr(&mut self, _dst_addr: MacAddress) -> &mut Self {
+    pub fn with_dst_addr(&mut self, dst_addr: MacAddress) -> &mut Self {
+        self.set_dst_addr(dst_addr);
         self
+    }
+
+    pub fn set_dst_addr(&mut self, dst_addr: MacAddress) {
+        dst_addr
+            .into_buff(&mut self.header.to_mut()[..ETH_DST_OFFSET])
+            .unwrap();
+    }
+
+    pub fn dst_addr(&self) -> MacAddress {
+        MacAddress::from_bytes(&self.header[ETH_DST_OFFSET..ETH_SRC_OFFSET])
+    }
+
+    pub fn with_src_addr(&mut self, src_addr: MacAddress) -> &mut Self {
+        self.set_src_addr(src_addr);
+        self
+    }
+
+    pub fn set_src_addr(&mut self, src_addr: MacAddress) {
+        src_addr
+            .into_buff(&mut self.header.to_mut()[ETH_DST_OFFSET..ETH_SRC_OFFSET])
+            .unwrap();
     }
 
     pub fn src_addr(&self) -> MacAddress {
-        self.header.src_addr()
+        MacAddress::from_bytes(&self.header[ETH_SRC_OFFSET..ETH_TYPE_OFFSET])
     }
 
-    pub fn set_src_addr(&mut self, _src_addr: MacAddress) -> &mut Self {
+    pub fn with_ether_type(&mut self, ether_type: u16) -> &mut Self {
+        self.set_ether_type(ether_type);
         self
+    }
+
+    pub fn set_ether_type(&mut self, ether_type: u16) {
+        let _ = &self.header.to_mut()[..std::mem::size_of::<u16>()]
+            .copy_from_slice(&ether_type.to_be_bytes());
     }
 
     pub fn ether_type(&self) -> u16 {
-        self.header.ether_type()
+        parse_bytes::<u16>(
+            &self.header[ETH_TYPE_OFFSET..ETH_HEADER_LEN],
+            crate::utils::Endian::Little,
+        )
+    }
+    pub fn payload(&self) -> &[u8] {
+        &self.data
     }
 
-    pub fn set_ether_type(&mut self, _ether_type: u16) -> &mut Self {
-        self
-    }
-
-    pub fn new(
-        arena: Arena,
-        dst_addr: MacAddress,
-        src_addr: MacAddress,
-        ether_type: u16,
-        data: &'a [u8],
-    ) -> Self {
-        Self {
-            header: EthernetHeader::new(dst_addr, src_addr, ether_type, arena),
-            data: data,
-        }
+    pub fn set_payload(&mut self, payload: &[u8]) {
+        self.data.to_mut().copy_from_slice(payload);
     }
 }

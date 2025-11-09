@@ -1,6 +1,7 @@
 use crate::error::ParseError;
 use crate::pdu::Pdu;
 use crate::utils::{Endian, parse_bytes};
+use std::borrow::Cow;
 use std::net::Ipv4Addr;
 
 pub static IPV4_BYTE_MULTIPLE: usize = 4;
@@ -18,45 +19,23 @@ static IPV4_OPT_OFFSET: usize = 20;
 static IPV4_HEADER_LEN: usize = 20;
 
 #[derive(Debug, Clone)]
-struct IpOptionHeader {
-    opt: u32,
-}
-
-#[derive(Debug, Clone)]
 pub struct IpOption<'a> {
-    bytes: &'a [u8],
-    header: IpOptionHeader,
+    header: Cow<'a, [u8]>,
 }
 
 impl<'a> IpOption<'a> {
     pub fn from_bytes(bytes: &'a [u8]) -> Self {
         Self {
-            bytes,
-            header: IpOptionHeader { opt: 0 },
+            header: Cow::Borrowed(&bytes),
         }
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-struct IpHeader {
-    vihl: u8,
-    tos: u8,
-    total_len: u16,
-    id: u16,
-    flag_frag: u16,
-    ttl: u8,
-    proto: u8,
-    checksum: u16,
-    src_addr: Ipv4Addr,
-    dst_addr: Ipv4Addr,
-}
-
 #[derive(Debug, Clone)]
 pub struct Ip<'a> {
-    bytes: &'a [u8],
-    header: Option<IpHeader>,
+    header: Cow<'a, [u8]>,
     opts: Vec<IpOption<'a>>,
-    pub data: &'a [u8],
+    data: Cow<'a, [u8]>,
 }
 
 fn get_ip_header_len<'a>(ip_header_bytes: &'a [u8]) -> usize {
@@ -74,15 +53,14 @@ impl<'a> Pdu<'a> for Ip<'a> {
         }
 
         let header_len = get_ip_header_len(&bytes[..IPV4_HEADER_LEN]);
-        if header_len < bytes.len() {
+        if header_len > bytes.len() {
             return Err(ParseError::NotEnoughData);
         }
 
         let result = Self {
-            bytes: &bytes[..header_len],
             opts: Vec::new(),
-            data: &bytes[header_len..],
-            header: None,
+            data: Cow::Borrowed(&bytes[header_len..]),
+            header: Cow::Borrowed(&bytes[..header_len]),
         };
 
         Ok(result)
@@ -90,18 +68,37 @@ impl<'a> Pdu<'a> for Ip<'a> {
 }
 
 impl<'a> Ip<'a> {
+    pub fn new() -> Self {
+        Self {
+            opts: Vec::new(),
+            header: Cow::Owned(Vec::with_capacity(IPV4_HEADER_LEN)),
+            data: Cow::Owned(Vec::new()),
+        }
+    }
+
     pub fn version(&self) -> u8 {
-        (self.bytes[IPV4_VERSION_OFFSET] & 0xF0) >> 4
+        (self.header[IPV4_VERSION_OFFSET] & 0xF0) >> 4
+    }
+
+    pub fn set_version(&mut self, version: u8) {
+        let version_byte = &mut self.header.to_mut()[IPV4_VERSION_OFFSET];
+        (*version_byte) &= 0x0F;
+        (*version_byte) &= version << 4;
+    }
+
+    pub fn with_version(&mut self, version: u8) -> &mut Self {
+        self.set_version(version);
+        self
     }
 
     pub fn ihl(&self) -> u16 {
-        let ihl = (self.bytes[IPV4_VERSION_OFFSET] & 0x0F) as usize * IPV4_BYTE_MULTIPLE;
+        let ihl = (self.header[IPV4_VERSION_OFFSET] & 0x0F) as usize * IPV4_BYTE_MULTIPLE;
         assert!(ihl >= IPV4_HEADER_LEN);
         ihl as u16
     }
 
     pub fn tos(&self) -> u8 {
-        self.bytes[IPV4_TOS_OFFSET]
+        self.header[IPV4_TOS_OFFSET]
     }
 
     pub fn dscp(&self) -> u8 {
@@ -114,20 +111,20 @@ impl<'a> Ip<'a> {
 
     pub fn total_len(&self) -> u16 {
         parse_bytes::<u16>(
-            &self.bytes[IPV4_TOTAL_LEN_OFFSET..IPV4_ID_OFFSET],
+            &self.header[IPV4_TOTAL_LEN_OFFSET..IPV4_ID_OFFSET],
             Endian::Big,
         )
     }
 
     pub fn id(&self) -> u16 {
         parse_bytes::<u16>(
-            &self.bytes[IPV4_ID_OFFSET..IPV4_FRAG_FLAG_OFFSET],
+            &self.header[IPV4_ID_OFFSET..IPV4_FRAG_FLAG_OFFSET],
             Endian::Big,
         )
     }
 
     pub fn flags(&self) -> u8 {
-        self.bytes[IPV4_FRAG_FLAG_OFFSET] >> 5
+        self.header[IPV4_FRAG_FLAG_OFFSET] >> 5
     }
 
     pub fn rf(&self) -> bool {
@@ -144,57 +141,39 @@ impl<'a> Ip<'a> {
 
     pub fn frag_offset(&self) -> u16 {
         parse_bytes::<u16>(
-            &self.bytes[IPV4_FRAG_FLAG_OFFSET..IPV4_TTL_OFFSET],
+            &self.header[IPV4_FRAG_FLAG_OFFSET..IPV4_TTL_OFFSET],
             Endian::Big,
         ) & 0x1FFF
     }
 
     pub fn ttl(&self) -> u8 {
-        self.bytes[IPV4_TTL_OFFSET]
+        self.header[IPV4_TTL_OFFSET]
     }
 
     pub fn protocol(&self) -> u8 {
-        self.bytes[IPV4_PROTO_OFFSET]
+        self.header[IPV4_PROTO_OFFSET]
     }
 
     pub fn checksum(&self) -> u16 {
         parse_bytes::<u16>(
-            &self.bytes[IPV4_CHECKSUM_OFFSET..IPV4_SRC_ADDR_OFFSET],
+            &self.header[IPV4_CHECKSUM_OFFSET..IPV4_SRC_ADDR_OFFSET],
             Endian::Big,
         )
     }
 
     pub fn src_addr(&self) -> Ipv4Addr {
         Ipv4Addr::from_bits(parse_bytes(
-            &self.bytes[IPV4_SRC_ADDR_OFFSET..IPV4_DST_ADDR_OFFSET],
+            &self.header[IPV4_SRC_ADDR_OFFSET..IPV4_DST_ADDR_OFFSET],
             Endian::Big,
         ))
     }
 
     pub fn dst_addr(&self) -> Ipv4Addr {
         Ipv4Addr::from_bits(parse_bytes(
-            &self.bytes[IPV4_DST_ADDR_OFFSET..IPV4_OPT_OFFSET],
+            &self.header[IPV4_DST_ADDR_OFFSET..IPV4_OPT_OFFSET],
             Endian::Big,
         ))
     }
-
-    // pub fn new(
-    //     version: u8,
-    //     ihl: u8,
-    //     tos: u8,
-    //     total_len: u16,
-    //     id: u16,
-    //     flags: u8,
-    //     frag_offset: u16,
-    //     ttl: u8,
-    //     protocol: u8,
-    //     src_addr: u32,
-    //     dst_addr: u32,
-    //     options: Option<Vec<IpOption>>,
-    //     payload: Vec<u8>,
-    // ) -> Self {
-    //     Self {}
-    // }
 }
 
 #[cfg(test)]

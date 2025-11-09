@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+arrayref = "0.3.9"
+bitfield-struct = "0.12.1"
 num-traits = "0.2.19"
 pcap = "2.3.0"
 
