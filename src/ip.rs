@@ -1,5 +1,5 @@
 use crate::error::ParseError;
-use crate::pdu::Pdu;
+use crate::pdu::{Pdu, PduType};
 use crate::utils::{Endian, parse_bytes};
 use std::borrow::Cow;
 use std::net::Ipv4Addr;
@@ -65,6 +65,10 @@ impl<'a> Pdu<'a> for Ip<'a> {
 
         Ok(result)
     }
+
+    fn pdu_type(&self) -> PduType {
+        PduType::Ip
+    }
 }
 
 impl<'a> Ip<'a> {
@@ -97,8 +101,26 @@ impl<'a> Ip<'a> {
         ihl as u16
     }
 
+    pub fn set_ihl(&self, ihl: u16) {
+        // TO-DO
+    }
+
+    pub fn with_ihl(&mut self, ihl: u16) -> &mut Self {
+        self.set_ihl(ihl);
+        self
+    }
+
     pub fn tos(&self) -> u8 {
         self.header[IPV4_TOS_OFFSET]
+    }
+
+    pub fn set_tos(&self, tos: u8) {
+        // TO-DO
+    }
+
+    pub fn with_tos(&mut self, tos: u8) -> &mut Self {
+        self.set_tos(tos);
+        self
     }
 
     pub fn dscp(&self) -> u8 {
@@ -173,6 +195,19 @@ impl<'a> Ip<'a> {
             &self.header[IPV4_DST_ADDR_OFFSET..IPV4_OPT_OFFSET],
             Endian::Big,
         ))
+    }
+
+    pub fn payload(&self) -> &[u8] {
+        &self.data
+    }
+
+    pub fn set_payload(&mut self, payload: &[u8]) {
+        self.data.to_mut().copy_from_slice(payload);
+    }
+
+    pub fn with_payload(&mut self, payload: &[u8]) -> &mut Self {
+        self.set_payload(payload);
+        self
     }
 }
 

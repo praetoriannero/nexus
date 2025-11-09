@@ -22,5 +22,9 @@ mod tests {
     #[test]
     fn test_pdu() {
         packet!(Ethernet::new(), Ip::new());
+        let boxed_pdu = Box::new(Ethernet::new());
+        println!("{:?}", boxed_pdu);
+        let unboxed_pdu = boxed_pdu.as_any().downcast_ref::<Ethernet>();
+        // println!("{:?}", &unboxed_pdu);
     }
 }

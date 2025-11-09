@@ -1,7 +1,8 @@
 use crate::error::ParseError;
-use crate::pdu::Pdu;
+use crate::pdu::{Pdu, PduType};
 use crate::utils::parse_bytes;
 
+use std::any::Any;
 use std::borrow::Cow;
 
 const ETH_DST_OFFSET: usize = 0;
@@ -53,9 +54,19 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
             data: Cow::Borrowed(&bytes[ETH_HEADER_LEN..]),
         })
     }
+
+    fn pdu_type(&self) -> PduType {
+        PduType::Ethernet
+    }
 }
 
+use better_any::Tid;
+
 impl<'a> Ethernet<'a> {
+    // pub fn as_any(&self) -> &dyn Tid<'a> {
+    //     self
+    // }
+
     pub fn new() -> Self {
         Self {
             header: Cow::Owned(Vec::with_capacity(ETH_HEADER_LEN)),

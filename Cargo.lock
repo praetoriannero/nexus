@@ -24,6 +24,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
+name = "better_any"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1795ebc740ea791ffbe6685e0688ab1effec16c2864e0476db40bfdf0c02cb3d"
+
+[[package]]
 name = "bitfield-struct"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -110,6 +116,7 @@ name = "nexus"
 version = "0.1.0"
 dependencies = [
  "arrayref",
+ "better_any",
  "bitfield-struct",
  "num-traits",
  "pcap",
