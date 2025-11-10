@@ -6,8 +6,8 @@ pub trait Pdu<'a> {
         Self: Sized;
     fn to_bytes(&self) -> Vec<u8>;
 
-    fn parent_pdu(&self) -> &Option<Box<dyn Pdu<'a>>>;
-    fn child_pdu(&self) -> &Option<Box<dyn Pdu<'a>>>;
+    fn parent_pdu(&self) -> &Pob<'a>;
+    fn child_pdu(&self) -> &Pob<'a>;
 
     fn pdu_type(&self) -> PduType;
 
@@ -16,6 +16,8 @@ pub trait Pdu<'a> {
     where
         Self: Sized;
 }
+
+pub type Pob<'a> = Option<Box<dyn Pdu<'a> + 'a>>;
 
 pub enum PduType {
     Ethernet,

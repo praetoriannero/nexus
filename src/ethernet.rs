@@ -1,5 +1,5 @@
 use crate::error::ParseError;
-use crate::pdu::{Pdu, PduKind, PduType};
+use crate::pdu::{Pdu, PduKind, PduType, Pob};
 use crate::utils::parse_bytes;
 
 use num_enum::TryFromPrimitive;
@@ -42,10 +42,10 @@ pub enum EtherType {
     Ipv6 = 0x86DD,
 }
 
-fn pdu_from_type<'a>(ether_type: u16, data: &'a [u8]) -> Option<Box<dyn Pdu<'a> + 'a>> {
+fn pdu_from_type<'a>(ether_type: u16, bytes: &'a [u8]) -> Pob<'a> {
     let et = EtherType::try_from(ether_type).unwrap();
     match et {
-        EtherType::Ipv4 => Some(Box::new((Ip::from_bytes(&data)).unwrap())),
+        EtherType::Ipv4 => Some(Box::new((Ip::from_bytes(&bytes)).unwrap())),
         _ => None,
     }
 }
@@ -60,8 +60,8 @@ fn get_ether_type(bytes: &[u8]) -> u16 {
 pub struct Ethernet<'a> {
     header: Cow<'a, [u8]>,
     data: Cow<'a, [u8]>,
-    parent: Option<Box<dyn Pdu<'a>>>,
-    child: Option<Box<dyn Pdu<'a>>>,
+    parent: Pob<'a>,
+    child: Pob<'a>,
 }
 
 impl<'a> Pdu<'a> for Ethernet<'a> {
@@ -72,15 +72,35 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
         res
     }
 
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
+        if bytes.len() < ETH_HEADER_LEN {
+            return Err(ParseError::NotEnoughData);
+        }
+
+        let et = get_ether_type(bytes);
+        let _inner = pdu_from_type(et, &bytes[ETH_HEADER_LEN..]);
+
+        let Some(inner) = _inner else {
+            return Err(ParseError::UnsupportedProtocol);
+        };
+
+        Ok(Self {
+            header: Cow::Borrowed(&bytes[..ETH_HEADER_LEN]),
+            data: Cow::Borrowed(&bytes[ETH_HEADER_LEN..]),
+            parent: None,
+            child: Some(inner),
+        })
+    }
+
     fn pdu_type(&self) -> PduType {
         PduType::Ethernet
     }
 
-    fn parent_pdu(&self) -> &Option<Box<dyn Pdu<'a>>> {
+    fn parent_pdu(&self) -> &Pob<'a> {
         &self.parent
     }
 
-    fn child_pdu(&self) -> &Option<Box<dyn Pdu<'a>>> {
+    fn child_pdu(&self) -> &Pob<'a> {
         &self.child
     }
 
@@ -90,19 +110,6 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
 
     fn static_pdu_kind() -> PduKind {
         PduKind(Ethernet::_kind)
-    }
-
-    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
-        if bytes.len() < ETH_HEADER_LEN {
-            return Err(ParseError::NotEnoughData);
-        }
-
-        Ok(Self {
-            header: Cow::Borrowed(&bytes[..ETH_HEADER_LEN]),
-            data: Cow::Borrowed(&bytes[ETH_HEADER_LEN..]),
-            parent: None,
-            child: None,
-        })
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::error::ParseError;
-use crate::pdu::{Pdu, PduKind, PduType};
+use crate::pdu::{Pdu, PduKind, PduType, Pob};
 use crate::utils::{Endian, parse_bytes};
 use std::borrow::Cow;
 use std::net::Ipv4Addr;
@@ -35,8 +35,8 @@ pub struct Ip<'a> {
     header: Cow<'a, [u8]>,
     opts: Vec<IpOption<'a>>,
     data: Cow<'a, [u8]>,
-    parent: Option<Box<dyn Pdu<'a>>>,
-    child: Option<Box<dyn Pdu<'a>>>,
+    parent: Pob<'a>,
+    child: Pob<'a>,
 }
 
 fn get_ip_header_len<'a>(ip_header_bytes: &'a [u8]) -> usize {
@@ -52,11 +52,11 @@ impl<'a> Pdu<'a> for Ip<'a> {
         PduType::Ip
     }
 
-    fn parent_pdu(&self) -> &Option<Box<dyn Pdu<'a>>> {
+    fn parent_pdu(&self) -> &Pob<'a> {
         &self.parent
     }
 
-    fn child_pdu(&self) -> &Option<Box<dyn Pdu<'a>>> {
+    fn child_pdu(&self) -> &Pob<'a> {
         &self.child
     }
 

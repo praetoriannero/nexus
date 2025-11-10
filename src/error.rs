@@ -5,6 +5,7 @@ use std::fmt;
 pub enum ParseError {
     NotEnoughData,
     InvalidHeader,
+    UnsupportedProtocol,
 }
 
 #[derive(Debug)]
