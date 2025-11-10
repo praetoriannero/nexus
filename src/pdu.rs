@@ -1,27 +1,83 @@
-use crate::error::ParseError;
-
-// use better_any::{Tid, TidAble};
-
 pub trait Pdu<'a> {
-    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError>
-    where
-        Self: Sized;
-
-    fn to_bytes(&self) -> Result<Vec<u8>, ParseError>
-    where
-        Self: Sized;
-
-    fn pdu_type(&self) -> PduType;
-
-    // fn as_any(&self) -> &dyn Tid<'a>
+    // fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError>
     // where
-    //     Self: TidAble<'a> + Sized,
-    // {
-    //     self
-    // }
+    //     Self: Sized;
+    fn parent_pdu(&self) -> &Option<Box<dyn Pdu<'a>>>;
+    fn child_pdu(&self) -> &Option<Box<dyn Pdu<'a>>>;
+    fn to_bytes(&self) -> Vec<u8>;
+    fn pdu_type(&self) -> PduType;
+    fn pdu_kind(&self) -> PduKind;
+    fn static_pdu_kind() -> PduKind
+    where
+        Self: Sized;
 }
 
 pub enum PduType {
     Ethernet,
     Ip,
 }
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct PduKind(pub fn());
+
+impl<'a> dyn Pdu<'a> {
+    pub fn downcast_ref<T: Pdu<'a>>(&self) -> Option<&T> {
+        if self.pdu_kind() == T::static_pdu_kind() {
+            unsafe { Some(&*(self as *const dyn Pdu<'a> as *const T)) }
+        } else {
+            None
+        }
+    }
+
+    pub fn downcast_mut<T: Pdu<'a>>(&mut self) -> Option<&mut T> {
+        if self.pdu_kind() == T::static_pdu_kind() {
+            unsafe { Some(&mut *(self as *mut dyn Pdu<'a> as *mut T)) }
+        } else {
+            None
+        }
+    }
+
+    pub fn downcast<T: Pdu<'a>>(self: Box<Self>) -> Option<Box<T>> {
+        if self.pdu_kind() == T::static_pdu_kind() {
+            let raw = Box::into_raw(self);
+            unsafe { Some(Box::from_raw(raw as *mut T)) }
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ethernet::Ethernet;
+    use crate::ip::Ip;
+
+    #[test]
+    fn test_downcast() {
+        let eth: Box<dyn Pdu> = Box::new(Ethernet::new());
+        let res = eth.downcast::<Ethernet>();
+        assert!(res.is_some());
+
+        let eth_inv: Box<dyn Pdu> = Box::new(Ip::new());
+        let res = eth_inv.downcast::<Ethernet>();
+        assert!(!res.is_some());
+    }
+
+    #[test]
+    fn test_downcast_mut() {
+        let mut eth: Box<dyn Pdu> = Box::new(Ethernet::new());
+        let res = eth.downcast_mut::<Ethernet>();
+        assert!(res.is_some());
+
+        let eth_inv: Box<dyn Pdu> = Box::new(Ip::new());
+        let res = eth_inv.downcast_ref::<Ethernet>();
+        assert!(!res.is_some());
+    }
+}
+// use crate::ip::Ip;
+//
+// pub enum PduType<'a> {
+//     Ethernet(Ethernet<'a>),
+//     Ip(Ip<'a>),
+// }

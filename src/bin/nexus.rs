@@ -1,6 +1,5 @@
 use nexus::ethernet::Ethernet;
 use nexus::ip::Ip;
-use nexus::pdu::Pdu;
 use pcap::Capture;
 
 fn main() {

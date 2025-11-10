@@ -1,8 +1,7 @@
 use crate::error::ParseError;
-use crate::pdu::{Pdu, PduType};
+use crate::pdu::{Pdu, PduKind, PduType};
 use crate::utils::parse_bytes;
 
-use std::any::Any;
 use std::borrow::Cow;
 
 const ETH_DST_OFFSET: usize = 0;
@@ -33,18 +32,46 @@ impl<'a> MacAddress<'a> {
     }
 }
 
-#[derive(Debug)]
 pub struct Ethernet<'a> {
     header: Cow<'a, [u8]>,
     data: Cow<'a, [u8]>,
+    parent: Option<Box<dyn Pdu<'a>>>,
+    child: Option<Box<dyn Pdu<'a>>>,
 }
 
 impl<'a> Pdu<'a> for Ethernet<'a> {
-    fn to_bytes(&self) -> Result<Vec<u8>, ParseError> {
-        Ok(Vec::new())
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut res = Vec::new();
+        res.extend_from_slice(&self.header);
+        res.extend_from_slice(&self.data);
+        res
     }
 
-    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
+    fn pdu_type(&self) -> PduType {
+        PduType::Ethernet
+    }
+
+    fn parent_pdu(&self) -> &Option<Box<dyn Pdu<'a>>> {
+        &self.parent
+    }
+
+    fn child_pdu(&self) -> &Option<Box<dyn Pdu<'a>>> {
+        &self.child
+    }
+
+    fn pdu_kind(&self) -> PduKind {
+        PduKind(Self::_kind)
+    }
+
+    fn static_pdu_kind() -> PduKind {
+        PduKind(Ethernet::_kind)
+    }
+}
+
+impl<'a> Ethernet<'a> {
+    fn _kind() {}
+
+    pub fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
         if bytes.len() < ETH_HEADER_LEN {
             return Err(ParseError::NotEnoughData);
         }
@@ -52,25 +79,17 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
         Ok(Self {
             header: Cow::Borrowed(&bytes[..ETH_HEADER_LEN]),
             data: Cow::Borrowed(&bytes[ETH_HEADER_LEN..]),
+            parent: None,
+            child: None,
         })
     }
 
-    fn pdu_type(&self) -> PduType {
-        PduType::Ethernet
-    }
-}
-
-use better_any::Tid;
-
-impl<'a> Ethernet<'a> {
-    // pub fn as_any(&self) -> &dyn Tid<'a> {
-    //     self
-    // }
-
     pub fn new() -> Self {
         Self {
-            header: Cow::Owned(Vec::with_capacity(ETH_HEADER_LEN)),
+            header: Cow::Owned(vec![0; ETH_HEADER_LEN]),
             data: Cow::Owned(Vec::new()),
+            parent: None,
+            child: None,
         }
     }
 

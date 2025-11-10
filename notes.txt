@@ -1,0 +1,6 @@
+To-do:
+- Think about how we can recover PDUs during deserialization
+- Maybe a vector of Box<dyn Pdu<'a>> ?
+- This is problematic because we can't downcast from Any because Any requires 'static!
+	- very annoying here
+	- maybe it doesn't have to be 'static?

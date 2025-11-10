@@ -1,5 +1,5 @@
 use crate::error::ParseError;
-use crate::pdu::{Pdu, PduType};
+use crate::pdu::{Pdu, PduKind, PduType};
 use crate::utils::{Endian, parse_bytes};
 use std::borrow::Cow;
 use std::net::Ipv4Addr;
@@ -31,11 +31,12 @@ impl<'a> IpOption<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
 pub struct Ip<'a> {
     header: Cow<'a, [u8]>,
     opts: Vec<IpOption<'a>>,
     data: Cow<'a, [u8]>,
+    parent: Option<Box<dyn Pdu<'a>>>,
+    child: Option<Box<dyn Pdu<'a>>>,
 }
 
 fn get_ip_header_len<'a>(ip_header_bytes: &'a [u8]) -> usize {
@@ -43,11 +44,35 @@ fn get_ip_header_len<'a>(ip_header_bytes: &'a [u8]) -> usize {
 }
 
 impl<'a> Pdu<'a> for Ip<'a> {
-    fn to_bytes(&self) -> Result<Vec<u8>, ParseError> {
-        Ok(vec![0; IPV4_HEADER_LEN as usize])
+    fn to_bytes(&self) -> Vec<u8> {
+        vec![0; IPV4_HEADER_LEN as usize]
     }
 
-    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
+    fn pdu_type(&self) -> PduType {
+        PduType::Ip
+    }
+
+    fn parent_pdu(&self) -> &Option<Box<dyn Pdu<'a>>> {
+        &self.parent
+    }
+
+    fn child_pdu(&self) -> &Option<Box<dyn Pdu<'a>>> {
+        &self.child
+    }
+
+    fn pdu_kind(&self) -> crate::pdu::PduKind {
+        PduKind(Self::_kind)
+    }
+
+    fn static_pdu_kind() -> crate::pdu::PduKind {
+        PduKind(Ip::_kind)
+    }
+}
+
+impl<'a> Ip<'a> {
+    fn _kind() {}
+
+    pub fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
         if bytes.len() < IPV4_HEADER_LEN {
             return Err(ParseError::NotEnoughData);
         }
@@ -61,22 +86,20 @@ impl<'a> Pdu<'a> for Ip<'a> {
             opts: Vec::new(),
             data: Cow::Borrowed(&bytes[header_len..]),
             header: Cow::Borrowed(&bytes[..header_len]),
+            child: None,
+            parent: None,
         };
 
         Ok(result)
     }
 
-    fn pdu_type(&self) -> PduType {
-        PduType::Ip
-    }
-}
-
-impl<'a> Ip<'a> {
     pub fn new() -> Self {
         Self {
             opts: Vec::new(),
             header: Cow::Owned(Vec::with_capacity(IPV4_HEADER_LEN)),
             data: Cow::Owned(Vec::new()),
+            child: None,
+            parent: None,
         }
     }
 
