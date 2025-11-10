@@ -4,19 +4,19 @@ use crate::utils::{Endian, parse_bytes};
 use std::borrow::Cow;
 use std::net::Ipv4Addr;
 
-pub static IPV4_BYTE_MULTIPLE: usize = 4;
-static IPV4_VERSION_OFFSET: usize = 0;
-static IPV4_TOS_OFFSET: usize = 1;
-static IPV4_TOTAL_LEN_OFFSET: usize = 2;
-static IPV4_ID_OFFSET: usize = 4;
-static IPV4_FRAG_FLAG_OFFSET: usize = 6;
-static IPV4_TTL_OFFSET: usize = 8;
-static IPV4_PROTO_OFFSET: usize = 9;
-static IPV4_CHECKSUM_OFFSET: usize = 10;
-static IPV4_SRC_ADDR_OFFSET: usize = 12;
-static IPV4_DST_ADDR_OFFSET: usize = 16;
-static IPV4_OPT_OFFSET: usize = 20;
-static IPV4_HEADER_LEN: usize = 20;
+pub const IPV4_BYTE_MULTIPLE: usize = 4;
+const IPV4_VERSION_OFFSET: usize = 0;
+const IPV4_TOS_OFFSET: usize = 1;
+const IPV4_TOTAL_LEN_OFFSET: usize = 2;
+const IPV4_ID_OFFSET: usize = 4;
+const IPV4_FRAG_FLAG_OFFSET: usize = 6;
+const IPV4_TTL_OFFSET: usize = 8;
+const IPV4_PROTO_OFFSET: usize = 9;
+const IPV4_CHECKSUM_OFFSET: usize = 10;
+const IPV4_SRC_ADDR_OFFSET: usize = 12;
+const IPV4_DST_ADDR_OFFSET: usize = 16;
+const IPV4_OPT_OFFSET: usize = 20;
+const IPV4_HEADER_LEN: usize = 20;
 
 #[derive(Debug, Clone)]
 pub struct IpOption<'a> {
@@ -60,19 +60,15 @@ impl<'a> Pdu<'a> for Ip<'a> {
         &self.child
     }
 
-    fn pdu_kind(&self) -> crate::pdu::PduKind {
+    fn dyn_pdu_kind(&self) -> crate::pdu::PduKind {
         PduKind(Self::_kind)
     }
 
     fn static_pdu_kind() -> crate::pdu::PduKind {
         PduKind(Ip::_kind)
     }
-}
 
-impl<'a> Ip<'a> {
-    fn _kind() {}
-
-    pub fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
         if bytes.len() < IPV4_HEADER_LEN {
             return Err(ParseError::NotEnoughData);
         }
@@ -92,6 +88,10 @@ impl<'a> Ip<'a> {
 
         Ok(result)
     }
+}
+
+impl<'a> Ip<'a> {
+    fn _kind() {}
 
     pub fn new() -> Self {
         Self {

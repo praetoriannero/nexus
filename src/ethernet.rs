@@ -2,7 +2,9 @@ use crate::error::ParseError;
 use crate::pdu::{Pdu, PduKind, PduType};
 use crate::utils::parse_bytes;
 
+use num_enum::TryFromPrimitive;
 use std::borrow::Cow;
+use std::convert::TryFrom;
 
 const ETH_DST_OFFSET: usize = 0;
 const ETH_SRC_OFFSET: usize = 6;
@@ -32,6 +34,29 @@ impl<'a> MacAddress<'a> {
     }
 }
 
+#[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
+#[repr(u16)]
+pub enum EtherType {
+    Ipv4 = 0x0800,
+    Arp = 0x0806,
+    Ipv6 = 0x86DD,
+}
+
+fn pdu_from_type<'a>(ether_type: u16, data: &'a [u8]) -> Option<Box<dyn Pdu<'a> + 'a>> {
+    let et = EtherType::try_from(ether_type).unwrap();
+    match et {
+        EtherType::Ipv4 => Some(Box::new((Ip::from_bytes(&data)).unwrap())),
+        _ => None,
+    }
+}
+
+fn get_ether_type(bytes: &[u8]) -> u16 {
+    parse_bytes::<u16>(
+        &bytes[ETH_TYPE_OFFSET..ETH_HEADER_LEN],
+        crate::utils::Endian::Little,
+    )
+}
+
 pub struct Ethernet<'a> {
     header: Cow<'a, [u8]>,
     data: Cow<'a, [u8]>,
@@ -59,19 +84,15 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
         &self.child
     }
 
-    fn pdu_kind(&self) -> PduKind {
+    fn dyn_pdu_kind(&self) -> PduKind {
         PduKind(Self::_kind)
     }
 
     fn static_pdu_kind() -> PduKind {
         PduKind(Ethernet::_kind)
     }
-}
 
-impl<'a> Ethernet<'a> {
-    fn _kind() {}
-
-    pub fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
         if bytes.len() < ETH_HEADER_LEN {
             return Err(ParseError::NotEnoughData);
         }
@@ -83,7 +104,11 @@ impl<'a> Ethernet<'a> {
             child: None,
         })
     }
+}
 
+use crate::ip::Ip;
+impl<'a> Ethernet<'a> {
+    fn _kind() {}
     pub fn new() -> Self {
         Self {
             header: Cow::Owned(vec![0; ETH_HEADER_LEN]),
@@ -134,11 +159,9 @@ impl<'a> Ethernet<'a> {
     }
 
     pub fn ether_type(&self) -> u16 {
-        parse_bytes::<u16>(
-            &self.header[ETH_TYPE_OFFSET..ETH_HEADER_LEN],
-            crate::utils::Endian::Little,
-        )
+        get_ether_type(&self.header)
     }
+
     pub fn payload(&self) -> &[u8] {
         &self.data
     }

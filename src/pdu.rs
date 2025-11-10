@@ -1,12 +1,17 @@
+use crate::error::ParseError;
+
 pub trait Pdu<'a> {
-    // fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError>
-    // where
-    //     Self: Sized;
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError>
+    where
+        Self: Sized;
+    fn to_bytes(&self) -> Vec<u8>;
+
     fn parent_pdu(&self) -> &Option<Box<dyn Pdu<'a>>>;
     fn child_pdu(&self) -> &Option<Box<dyn Pdu<'a>>>;
-    fn to_bytes(&self) -> Vec<u8>;
+
     fn pdu_type(&self) -> PduType;
-    fn pdu_kind(&self) -> PduKind;
+
+    fn dyn_pdu_kind(&self) -> PduKind;
     fn static_pdu_kind() -> PduKind
     where
         Self: Sized;
@@ -22,7 +27,7 @@ pub struct PduKind(pub fn());
 
 impl<'a> dyn Pdu<'a> {
     pub fn downcast_ref<T: Pdu<'a>>(&self) -> Option<&T> {
-        if self.pdu_kind() == T::static_pdu_kind() {
+        if self.dyn_pdu_kind() == T::static_pdu_kind() {
             unsafe { Some(&*(self as *const dyn Pdu<'a> as *const T)) }
         } else {
             None
@@ -30,7 +35,7 @@ impl<'a> dyn Pdu<'a> {
     }
 
     pub fn downcast_mut<T: Pdu<'a>>(&mut self) -> Option<&mut T> {
-        if self.pdu_kind() == T::static_pdu_kind() {
+        if self.dyn_pdu_kind() == T::static_pdu_kind() {
             unsafe { Some(&mut *(self as *mut dyn Pdu<'a> as *mut T)) }
         } else {
             None
@@ -38,7 +43,7 @@ impl<'a> dyn Pdu<'a> {
     }
 
     pub fn downcast<T: Pdu<'a>>(self: Box<Self>) -> Option<Box<T>> {
-        if self.pdu_kind() == T::static_pdu_kind() {
+        if self.dyn_pdu_kind() == T::static_pdu_kind() {
             let raw = Box::into_raw(self);
             unsafe { Some(Box::from_raw(raw as *mut T)) }
         } else {
@@ -75,9 +80,3 @@ mod tests {
         assert!(!res.is_some());
     }
 }
-// use crate::ip::Ip;
-//
-// pub enum PduType<'a> {
-//     Ethernet(Ethernet<'a>),
-//     Ip(Ip<'a>),
-// }
