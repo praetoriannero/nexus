@@ -77,10 +77,7 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
             return Err(ParseError::NotEnoughData);
         }
 
-        let et = get_ether_type(bytes);
-        let _inner = pdu_from_type(et, &bytes[ETH_HEADER_LEN..]);
-
-        let Some(inner) = _inner else {
+        let Some(inner) = pdu_from_type(get_ether_type(bytes), &bytes[ETH_HEADER_LEN..]) else {
             return Err(ParseError::UnsupportedProtocol);
         };
 
