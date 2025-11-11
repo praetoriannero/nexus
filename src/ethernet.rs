@@ -45,7 +45,7 @@ pub enum EtherType {
 fn pdu_from_type(ether_type: u16, bytes: &[u8]) -> Pob {
     let et = EtherType::try_from(ether_type).unwrap();
     match et {
-        EtherType::Ipv4 => Some(Box::new((Ip::from_bytes(&bytes)).unwrap())),
+        EtherType::Ipv4 => Some(Box::new((Ip::from_bytes(bytes)).unwrap())),
         _ => None,
     }
 }
@@ -53,7 +53,7 @@ fn pdu_from_type(ether_type: u16, bytes: &[u8]) -> Pob {
 fn get_ether_type(bytes: &[u8]) -> u16 {
     parse_bytes::<u16>(
         &bytes[ETH_TYPE_OFFSET..ETH_HEADER_LEN],
-        crate::utils::Endian::Little,
+        crate::utils::Endian::Big,
     )
 }
 

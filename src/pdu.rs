@@ -4,14 +4,24 @@ pub trait Pdu<'a> {
     fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError>
     where
         Self: Sized;
+
     fn to_bytes(&self) -> Vec<u8>;
 
     fn parent_pdu(&self) -> &Pob<'a>;
+
     fn child_pdu(&self) -> &Pob<'a>;
+
+    fn pdu_chain(&self, chain: &mut Vec<PduType>) {
+        chain.push(self.pdu_type());
+        if let Some(child) = self.child_pdu() {
+            child.pdu_chain(chain);
+        }
+    }
 
     fn pdu_type(&self) -> PduType;
 
     fn dyn_pdu_kind(&self) -> PduKind;
+
     fn static_pdu_kind() -> PduKind
     where
         Self: Sized;
@@ -27,8 +37,8 @@ pub enum PduType {
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct PduKind(pub fn());
 
-impl<'a> dyn Pdu<'a> {
-    pub fn downcast_ref<T: Pdu<'a>>(&self) -> Option<&T> {
+impl<'a> dyn Pdu<'a> + 'a {
+    pub fn downcast_ref<T: Pdu<'a> + 'a>(&self) -> Option<&T> {
         if self.dyn_pdu_kind() == T::static_pdu_kind() {
             unsafe { Some(&*(self as *const dyn Pdu<'a> as *const T)) }
         } else {

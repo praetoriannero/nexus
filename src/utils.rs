@@ -1,4 +1,5 @@
 use num_traits::{FromPrimitive, PrimInt, Unsigned};
+use pcap::TimestampType;
 use std::mem;
 use std::ops::BitOrAssign;
 
@@ -31,6 +32,25 @@ where
             result
         }
     }
+}
+
+pub fn printable_ascii(input: &[u8]) -> String {
+    input
+        .iter()
+        .map(|&b| {
+            if (0x20..=0x7E).contains(&b) {
+                b as char
+            } else {
+                '.'
+            }
+        })
+        .collect()
+}
+
+pub fn get_header_ts(header: &pcap::PacketHeader) -> f64 {
+    let mut ts = header.ts.tv_sec as f64;
+    ts += header.ts.tv_usec as f64 / 1_000_000.0;
+    ts
 }
 
 #[cfg(test)]
