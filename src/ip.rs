@@ -1,6 +1,8 @@
 use crate::error::ParseError;
-use crate::pdu::{Pdu, PduKind, PduType, Pob};
+use crate::pdu::{Pdu, PduType, Pob};
 use crate::utils::{Endian, parse_bytes};
+
+use std::any::TypeId;
 use std::borrow::Cow;
 use std::net::Ipv4Addr;
 
@@ -60,12 +62,12 @@ impl<'a> Pdu<'a> for Ip<'a> {
         &self.child
     }
 
-    fn dyn_pdu_kind(&self) -> crate::pdu::PduKind {
-        PduKind(Self::_kind)
+    fn self_id(&self) -> TypeId {
+        TypeId::of::<Ip>()
     }
 
-    fn static_pdu_kind() -> crate::pdu::PduKind {
-        PduKind(Ip::_kind)
+    fn id() -> TypeId {
+        TypeId::of::<Ip>()
     }
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
@@ -91,12 +93,10 @@ impl<'a> Pdu<'a> for Ip<'a> {
 }
 
 impl<'a> Ip<'a> {
-    fn _kind() {}
-
     pub fn new() -> Self {
         Self {
             opts: Vec::new(),
-            header: Cow::Owned(Vec::with_capacity(IPV4_HEADER_LEN)),
+            header: Cow::Owned(vec![0; IPV4_HEADER_LEN]),
             data: Cow::Owned(Vec::new()),
             child: None,
             parent: None,

@@ -1,8 +1,10 @@
 use crate::error::ParseError;
-use crate::pdu::{Pdu, PduKind, PduType, Pob};
+use crate::ip::Ip;
+use crate::pdu::{Pdu, PduType, Pob};
 use crate::utils::parse_bytes;
 
 use num_enum::TryFromPrimitive;
+use std::any::TypeId;
 use std::borrow::Cow;
 use std::convert::TryFrom;
 
@@ -101,18 +103,16 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
         &self.child
     }
 
-    fn dyn_pdu_kind(&self) -> PduKind {
-        PduKind(Self::_kind)
+    fn self_id(&self) -> TypeId {
+        TypeId::of::<Ethernet>()
     }
 
-    fn static_pdu_kind() -> PduKind {
-        PduKind(Ethernet::_kind)
+    fn id() -> TypeId {
+        TypeId::of::<Ethernet>()
     }
 }
 
-use crate::ip::Ip;
 impl<'a> Ethernet<'a> {
-    fn _kind() {}
     pub fn new() -> Self {
         Self {
             header: Cow::Owned(vec![0; ETH_HEADER_LEN]),

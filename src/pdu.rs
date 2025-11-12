@@ -1,6 +1,7 @@
 use crate::error::ParseError;
+use std::any::TypeId;
 
-pub trait Pdu<'a> {
+pub trait Pdu<'a>: 'a {
     fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError>
     where
         Self: Sized;
@@ -20,9 +21,9 @@ pub trait Pdu<'a> {
 
     fn pdu_type(&self) -> PduType;
 
-    fn dyn_pdu_kind(&self) -> PduKind;
+    fn self_id(&self) -> TypeId;
 
-    fn static_pdu_kind() -> PduKind
+    fn id() -> TypeId
     where
         Self: Sized;
 }
@@ -34,28 +35,28 @@ pub enum PduType {
     Ip,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub struct PduKind(pub fn());
-
 impl<'a> dyn Pdu<'a> + 'a {
-    pub fn downcast_ref<T: Pdu<'a> + 'a>(&self) -> Option<&T> {
-        if self.dyn_pdu_kind() == T::static_pdu_kind() {
-            unsafe { Some(&*(self as *const dyn Pdu<'a> as *const T)) }
+    pub fn downcast_ref<T: Pdu<'a> + 'a>(&self) -> Option<&'a T> {
+        if self.self_id() == T::id() {
+            unsafe { Some(&*(self as *const _ as *const T)) }
         } else {
             None
         }
     }
 
-    pub fn downcast_mut<T: Pdu<'a>>(&mut self) -> Option<&mut T> {
-        if self.dyn_pdu_kind() == T::static_pdu_kind() {
-            unsafe { Some(&mut *(self as *mut dyn Pdu<'a> as *mut T)) }
+    pub fn downcast_mut<T: Pdu<'a> + 'a>(&mut self) -> Option<&'a mut T> {
+        if self.self_id() == T::id() {
+            unsafe { Some(&mut *(self as *mut _ as *mut T)) }
         } else {
             None
         }
     }
 
-    pub fn downcast<T: Pdu<'a>>(self: Box<Self>) -> Option<Box<T>> {
-        if self.dyn_pdu_kind() == T::static_pdu_kind() {
+    pub fn downcast<T: Pdu<'a> + 'a>(self: Box<Self>) -> Option<Box<T>>
+    where
+        T: 'a,
+    {
+        if self.self_id() == T::id() {
             let raw = Box::into_raw(self);
             unsafe { Some(Box::from_raw(raw as *mut T)) }
         } else {

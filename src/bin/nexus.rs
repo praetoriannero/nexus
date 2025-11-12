@@ -5,6 +5,7 @@ use nexus::pdu::Pdu;
 use nexus::utils::printable_ascii;
 use pcap::Capture;
 
+use std::any::TypeId;
 fn main() {
     let mut cap = Capture::from_file("/home/nick/source/nexus/data/test.pcapng").unwrap();
     while let Ok(packet) = cap.next_packet() {
@@ -16,6 +17,8 @@ fn main() {
         );
         let bytes = packet.data.to_vec();
         let eth_pdu = Ethernet::from_bytes(&bytes).unwrap();
+        println!("{:?}", eth_pdu.self_id());
+        println!("{:?}", TypeId::of::<Ethernet<'static>>());
         let Some(inner) = eth_pdu.child_pdu() else {
             continue;
         };
