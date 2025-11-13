@@ -7,4 +7,5 @@ pub mod ip;
 pub mod packet;
 pub mod pdu;
 pub mod tcp;
+pub mod tid;
 pub mod utils;
