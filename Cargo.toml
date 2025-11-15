@@ -1,20 +1,5 @@
-[package]
-name = "nexus"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-arrayref = "0.3.9"
-better_any = "0.2.0"
-bitfield-struct = "0.12.1"
-chrono = "0.4.42"
-num-traits = "0.2.19"
-num_enum = "0.7.5"
-pcap = "2.3.0"
-quote = "1.0.42"
-syn = "2.0.110"
-
-[[bin]]
-name = "nexus"
-source = "src/bin/nexus.rs"
-
+[workspace]
+members = [
+    "nexus-lib",
+    "proc-macros"
+]
