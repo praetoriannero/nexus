@@ -6,6 +6,7 @@ pub mod icmp;
 pub mod ip;
 pub mod packet;
 pub mod pdu;
+pub mod raw;
 pub mod tcp;
 pub mod tid;
 pub mod utils;

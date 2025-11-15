@@ -1,5 +1,5 @@
 use crate::error::ParseError;
-use crate::pdu::{Pdu, PduType, Pob};
+use crate::pdu::{Pdu, Pob};
 use crate::utils::{Endian, parse_bytes};
 
 use std::any::TypeId;
@@ -48,10 +48,6 @@ fn get_ip_header_len<'a>(ip_header_bytes: &'a [u8]) -> usize {
 impl<'a> Pdu<'a> for Ip<'a> {
     fn to_bytes(&self) -> Vec<u8> {
         vec![0; IPV4_HEADER_LEN as usize]
-    }
-
-    fn pdu_type(&self) -> PduType {
-        PduType::Ip
     }
 
     fn parent_pdu(&self) -> &Pob<'a> {

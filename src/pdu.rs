@@ -12,14 +12,12 @@ pub trait Pdu<'a>: 'a {
 
     fn child_pdu(&self) -> &Pob<'a>;
 
-    fn pdu_chain(&self, chain: &mut Vec<PduType>) {
-        chain.push(self.pdu_type());
+    fn pdu_chain(&self, chain: &mut Vec<TypeId>) {
+        chain.push(self.self_id());
         if let Some(child) = self.child_pdu() {
             child.pdu_chain(chain);
         }
     }
-
-    fn pdu_type(&self) -> PduType;
 
     fn self_id(&self) -> TypeId;
 
@@ -29,11 +27,6 @@ pub trait Pdu<'a>: 'a {
 }
 
 pub type Pob<'a> = Option<Box<dyn Pdu<'a> + 'a>>;
-
-pub enum PduType {
-    Ethernet,
-    Ip,
-}
 
 impl<'a> dyn Pdu<'a> + 'a {
     pub fn downcast_ref<T: Pdu<'a> + 'a>(&self) -> Option<&'a T> {

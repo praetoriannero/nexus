@@ -1,6 +1,6 @@
 use crate::error::ParseError;
 use crate::ip::Ip;
-use crate::pdu::{Pdu, PduType, Pob};
+use crate::pdu::{Pdu, Pob};
 use crate::utils::parse_bytes;
 
 use num_enum::TryFromPrimitive;
@@ -47,7 +47,7 @@ pub enum EtherType {
 fn pdu_from_type(ether_type: u16, bytes: &[u8]) -> Pob {
     let et = EtherType::try_from(ether_type).unwrap();
     match et {
-        EtherType::Ipv4 => Some(Box::new((Ip::from_bytes(bytes)).unwrap())),
+        EtherType::Ipv4 => Some(Box::new(Ip::from_bytes(bytes).unwrap())),
         _ => None,
     }
 }
@@ -89,10 +89,6 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
             parent: None,
             child: Some(inner),
         })
-    }
-
-    fn pdu_type(&self) -> PduType {
-        PduType::Ethernet
     }
 
     fn parent_pdu(&self) -> &Pob<'a> {
