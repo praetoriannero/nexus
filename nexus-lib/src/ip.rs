@@ -1,8 +1,10 @@
 use crate::error::ParseError;
 use crate::pdu::{Pdu, Pob};
 use crate::utils::{Endian, parse_bytes};
-
 use std::any::TypeId;
+
+use nexus_macros::Tid;
+use nexus_tid::Tid;
 use std::borrow::Cow;
 use std::net::Ipv4Addr;
 
@@ -33,6 +35,7 @@ impl<'a> IpOption<'a> {
     }
 }
 
+#[derive(Tid)]
 pub struct Ip<'a> {
     header: Cow<'a, [u8]>,
     opts: Vec<IpOption<'a>>,
@@ -56,14 +59,6 @@ impl<'a> Pdu<'a> for Ip<'a> {
 
     fn child_pdu(&self) -> &Pob<'a> {
         &self.child
-    }
-
-    fn self_id(&self) -> TypeId {
-        TypeId::of::<Ip>()
-    }
-
-    fn id() -> TypeId {
-        TypeId::of::<Ip>()
     }
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
@@ -120,7 +115,7 @@ impl<'a> Ip<'a> {
         ihl as u16
     }
 
-    pub fn set_ihl(&self, ihl: u16) {
+    pub fn set_ihl(&self, _ihl: u16) {
         // TO-DO
     }
 
@@ -133,7 +128,7 @@ impl<'a> Ip<'a> {
         self.header[IPV4_TOS_OFFSET]
     }
 
-    pub fn set_tos(&self, tos: u8) {
+    pub fn set_tos(&self, _tos: u8) {
         // TO-DO
     }
 

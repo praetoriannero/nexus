@@ -3,7 +3,10 @@ use std::borrow::Cow;
 
 use crate::error::ParseError;
 use crate::pdu::{Pdu, Pob};
+use nexus_macros::Tid;
+use nexus_tid::Tid;
 
+#[derive(Tid)]
 pub struct Raw<'a> {
     data: Cow<'a, [u8]>,
     parent: Pob<'a>,
@@ -31,13 +34,5 @@ impl<'a> Pdu<'a> for Raw<'a> {
 
     fn child_pdu(&self) -> &Pob<'a> {
         &self.child
-    }
-
-    fn self_id(&self) -> TypeId {
-        TypeId::of::<Raw>()
-    }
-
-    fn id() -> TypeId {
-        TypeId::of::<Raw>()
     }
 }

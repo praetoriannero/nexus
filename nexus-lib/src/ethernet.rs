@@ -2,9 +2,11 @@ use crate::error::ParseError;
 use crate::ip::Ip;
 use crate::pdu::{Pdu, Pob};
 use crate::utils::parse_bytes;
-
-use num_enum::TryFromPrimitive;
 use std::any::TypeId;
+
+use nexus_macros::Tid;
+use nexus_tid::Tid;
+use num_enum::TryFromPrimitive;
 use std::borrow::Cow;
 use std::convert::TryFrom;
 
@@ -59,6 +61,7 @@ fn get_ether_type(bytes: &[u8]) -> u16 {
     )
 }
 
+#[derive(Tid)]
 pub struct Ethernet<'a> {
     header: Cow<'a, [u8]>,
     data: Cow<'a, [u8]>,
@@ -97,14 +100,6 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
 
     fn child_pdu(&self) -> &Pob<'a> {
         &self.child
-    }
-
-    fn self_id(&self) -> TypeId {
-        TypeId::of::<Ethernet>()
-    }
-
-    fn id() -> TypeId {
-        TypeId::of::<Ethernet>()
     }
 }
 

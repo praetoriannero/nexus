@@ -8,5 +8,4 @@ pub mod packet;
 pub mod pdu;
 pub mod raw;
 pub mod tcp;
-pub mod tid;
 pub mod utils;

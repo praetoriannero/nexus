@@ -1,7 +1,10 @@
 use crate::error::ParseError;
 use std::any::TypeId;
 
-pub trait Pdu<'a>: 'a {
+use nexus_tid::Tid;
+// use better_any::{Tid, tid};
+
+pub trait Pdu<'a>: Tid<'a> + 'a {
     fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError>
     where
         Self: Sized;
@@ -18,12 +21,6 @@ pub trait Pdu<'a>: 'a {
             child.pdu_chain(chain);
         }
     }
-
-    fn self_id(&self) -> TypeId;
-
-    fn id() -> TypeId
-    where
-        Self: Sized;
 }
 
 pub type Pob<'a> = Option<Box<dyn Pdu<'a> + 'a>>;

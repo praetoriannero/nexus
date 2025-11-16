@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "nexus-lib",
-    "proc-macros"
+    "nexus-macros",
+    "nexus-tid"
 ]

@@ -208,18 +208,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
 
 [[package]]
-name = "nexus"
+name = "nexus-lib"
 version = "0.1.0"
 dependencies = [
  "arrayref",
  "better_any",
  "bitfield-struct",
  "chrono",
+ "nexus-macros",
+ "nexus-tid",
  "num-traits",
  "num_enum",
  "pcap",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "nexus-macros"
+version = "0.1.0"
+dependencies = [
+ "nexus-tid",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "nexus-tid"
+version = "0.1.0"
+dependencies = [
+ "better_any",
 ]
 
 [[package]]
@@ -297,10 +315,6 @@ checksum = "5ee95bc4ef87b8d5ba32e8b7714ccc834865276eab0aed5c9958d00ec45f49e8"
 dependencies = [
  "unicode-ident",
 ]
-
-[[package]]
-name = "proc-macros"
-version = "0.1.0"
 
 [[package]]
 name = "quote"
