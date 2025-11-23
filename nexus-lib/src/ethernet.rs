@@ -46,7 +46,7 @@ pub enum EtherType {
     Ipv6 = 0x86DD,
 }
 
-fn pdu_from_type(ether_type: u16, bytes: &[u8]) -> Pob {
+fn pdu_from_type<'a>(ether_type: u16, bytes: &'a [u8]) -> Pob<'a> {
     let et = EtherType::try_from(ether_type).unwrap();
     match et {
         EtherType::Ipv4 => Some(Box::new(Ip::from_bytes(bytes).unwrap())),
