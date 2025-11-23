@@ -1,5 +1,4 @@
 use num_traits::{FromPrimitive, PrimInt, Unsigned};
-use pcap::TimestampType;
 use std::mem;
 use std::ops::BitOrAssign;
 
