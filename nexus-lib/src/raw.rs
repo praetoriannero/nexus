@@ -28,11 +28,11 @@ impl<'a> Pdu<'a> for Raw<'a> {
         })
     }
 
-    fn parent_pdu(&self) -> &Pob<'a> {
-        &self.parent
+    fn parent_pdu(&mut self) -> &mut Pob<'a> {
+        &mut self.parent
     }
 
-    fn child_pdu(&self) -> &Pob<'a> {
-        &self.child
+    fn child_pdu(&mut self) -> &mut Pob<'a> {
+        &mut self.child
     }
 }

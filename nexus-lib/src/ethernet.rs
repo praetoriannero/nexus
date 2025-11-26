@@ -1,6 +1,7 @@
 use crate::error::ParseError;
 use crate::ip::Ip;
 use crate::pdu::{Pdu, Pob};
+use crate::raw::Raw;
 use crate::utils::parse_bytes;
 use std::any::TypeId;
 
@@ -47,10 +48,12 @@ pub enum EtherType {
 }
 
 fn pdu_from_type<'a>(ether_type: u16, bytes: &'a [u8]) -> Pob<'a> {
-    let et = EtherType::try_from(ether_type).unwrap();
+    let Ok(et) = EtherType::try_from(ether_type) else {
+        return Some(Box::new(Raw::from_bytes(bytes).unwrap()));
+    };
     match et {
         EtherType::Ipv4 => Some(Box::new(Ip::from_bytes(bytes).unwrap())),
-        _ => None,
+        _ => Some(Box::new(Raw::from_bytes(bytes).unwrap())),
     }
 }
 
@@ -94,12 +97,12 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
         })
     }
 
-    fn parent_pdu(&self) -> &Pob<'a> {
-        &self.parent
+    fn parent_pdu(&mut self) -> &mut Pob<'a> {
+        &mut self.parent
     }
 
-    fn child_pdu(&self) -> &Pob<'a> {
-        &self.child
+    fn child_pdu(&mut self) -> &mut Pob<'a> {
+        &mut self.child
     }
 }
 
@@ -124,7 +127,7 @@ impl<'a> Ethernet<'a> {
             .unwrap();
     }
 
-    pub fn dst_addr(&self) -> MacAddress {
+    pub fn dst_addr(&'a self) -> MacAddress<'a> {
         MacAddress::from_bytes(&self.header[ETH_DST_OFFSET..ETH_SRC_OFFSET])
     }
 
@@ -139,7 +142,7 @@ impl<'a> Ethernet<'a> {
             .unwrap();
     }
 
-    pub fn src_addr(&self) -> MacAddress {
+    pub fn src_addr(&'a self) -> MacAddress<'a> {
         MacAddress::from_bytes(&self.header[ETH_SRC_OFFSET..ETH_TYPE_OFFSET])
     }
 

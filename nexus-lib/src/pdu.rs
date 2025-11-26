@@ -2,7 +2,6 @@ use crate::error::ParseError;
 use std::any::TypeId;
 
 use nexus_tid::Tid;
-// use better_any::{Tid, tid};
 
 pub trait Pdu<'a>: Tid<'a> + 'a {
     fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError>
@@ -11,17 +10,19 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
 
     fn to_bytes(&self) -> Vec<u8>;
 
-    fn parent_pdu(&self) -> &Pob<'a>;
+    fn parent_pdu(&mut self) -> &mut Pob<'a>;
 
-    fn child_pdu(&self) -> &Pob<'a>;
+    fn child_pdu(&mut self) -> &mut Pob<'a>;
 
-    fn pdu_chain(&self, chain: &mut Vec<TypeId>) {
+    fn pdu_chain(&mut self, chain: &mut Vec<TypeId>) {
         chain.push(self.self_id());
         if let Some(child) = self.child_pdu() {
             child.pdu_chain(chain);
         }
     }
 }
+
+// pub fn find_pdu<T>() ->
 
 pub type Pob<'a> = Option<Box<dyn Pdu<'a> + 'a>>;
 

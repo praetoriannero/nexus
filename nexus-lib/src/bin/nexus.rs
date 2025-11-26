@@ -6,7 +6,7 @@ use nexus_lib::utils::printable_ascii;
 use pcap::Capture;
 
 fn main() {
-    let mut cap = Capture::from_file("/home/nick/source/nexus/data/test.pcapng").unwrap();
+    let mut cap = Capture::from_file("./data/test.pcapng").unwrap();
     while let Ok(packet) = cap.next_packet() {
         println!(
             "{:?} {}",
@@ -14,11 +14,13 @@ fn main() {
                 .unwrap(),
             printable_ascii(packet.data)
         );
-        let eth_pdu = Ethernet::from_bytes(&packet.data).unwrap();
+        let Ok(mut eth_pdu) = Ethernet::from_bytes(&packet.data) else {
+            continue;
+        };
         let Some(inner) = eth_pdu.child_pdu() else {
             continue;
         };
-        let ip_pdu = (*inner).downcast_ref::<Ip>().unwrap();
+        let mut ip_pdu = inner.downcast_mut::<Ip>().unwrap();
         println!("{}", ip_pdu.src_addr());
     }
 }

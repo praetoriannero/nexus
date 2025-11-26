@@ -33,6 +33,10 @@ impl<'a> IpOption<'a> {
             header: Cow::Borrowed(&bytes),
         }
     }
+
+    pub fn to_bytes(&'a self) -> &'a [u8] {
+        &self.header
+    }
 }
 
 #[derive(Tid)]
@@ -50,15 +54,19 @@ fn get_ip_header_len<'a>(ip_header_bytes: &'a [u8]) -> usize {
 
 impl<'a> Pdu<'a> for Ip<'a> {
     fn to_bytes(&self) -> Vec<u8> {
-        vec![0; IPV4_HEADER_LEN as usize]
+        let mut res = vec![0; IPV4_HEADER_LEN as usize];
+        for idx in 0..self.opts.len() {
+            res.extend_from_slice(self.opts[idx].to_bytes());
+        }
+        res
     }
 
-    fn parent_pdu(&self) -> &Pob<'a> {
-        &self.parent
+    fn parent_pdu(&mut self) -> &mut Pob<'a> {
+        &mut self.parent
     }
 
-    fn child_pdu(&self) -> &Pob<'a> {
-        &self.child
+    fn child_pdu(&mut self) -> &mut Pob<'a> {
+        &mut self.child
     }
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
