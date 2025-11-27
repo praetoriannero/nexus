@@ -6,7 +6,6 @@ use crate::pdu::{Pdu, Pob};
 use nexus_macros::{Tid, pdu_impl, pdu_type};
 use nexus_tid::Tid;
 
-#[derive(Tid)]
 #[pdu_type]
 pub struct Raw<'a> {}
 

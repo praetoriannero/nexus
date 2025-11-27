@@ -23,7 +23,6 @@ const IPV4_OPT_OFFSET: usize = 20;
 const IPV4_HEADER_LEN: usize = 20;
 
 #[pdu_type]
-#[derive(Tid)]
 pub struct IpOption<'a> {}
 
 #[pdu_impl]
@@ -45,7 +44,6 @@ impl<'a> Pdu<'a> for IpOption<'a> {
 }
 
 #[pdu_type]
-#[derive(Tid)]
 pub struct Ip<'a> {
     opts: Vec<IpOption<'a>>,
 }

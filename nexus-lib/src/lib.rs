@@ -4,6 +4,7 @@ pub mod error;
 pub mod ethernet;
 pub mod icmp;
 pub mod ip;
+pub mod mac_address;
 pub mod packet;
 pub mod pdu;
 pub mod raw;

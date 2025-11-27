@@ -1,13 +1,14 @@
 use crate::error::ParseError;
 use crate::ip::Ip;
+use crate::mac_address::MacAddress;
 use crate::pdu::{Pdu, Pob};
 use crate::raw::Raw;
 use crate::utils::parse_bytes;
-use std::any::TypeId;
 
 use nexus_macros::{Tid, pdu_impl, pdu_type};
 use nexus_tid::Tid;
 use num_enum::TryFromPrimitive;
+use std::any::TypeId;
 use std::borrow::Cow;
 use std::convert::TryFrom;
 
@@ -15,29 +16,6 @@ const ETH_DST_OFFSET: usize = 0;
 const ETH_SRC_OFFSET: usize = 6;
 const ETH_TYPE_OFFSET: usize = 12;
 const ETH_HEADER_LEN: usize = 14;
-const MAC_ADDR_SIZE: usize = 6;
-
-#[derive(Debug, Clone, Copy)]
-pub struct MacAddress<'a> {
-    address: &'a [u8; MAC_ADDR_SIZE],
-}
-
-impl<'a> MacAddress<'a> {
-    pub fn into_buff(&self, buff: &mut [u8]) -> Result<(), std::array::TryFromSliceError> {
-        self.address.clone_into(buff.try_into()?);
-        Ok(())
-    }
-
-    pub fn from_bytes(bytes: &'a [u8]) -> Self {
-        Self {
-            address: bytes.try_into().expect("err"),
-        }
-    }
-
-    pub fn to_bytes(&self) -> [u8; 6] {
-        self.address.clone()
-    }
-}
 
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
 #[repr(u16)]
@@ -64,7 +42,6 @@ fn get_ether_type(bytes: &[u8]) -> u16 {
     )
 }
 
-#[derive(Tid)]
 #[pdu_type]
 pub struct Ethernet<'a> {}
 

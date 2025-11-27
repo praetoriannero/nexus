@@ -69,5 +69,11 @@ pub fn pdu_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
         fields.named.extend(pdu_fields.named);
     }
 
+    let derive_tid: syn::Attribute = syn::parse_quote!(
+        #[derive(Tid)]
+    );
+
+    struct_kind.attrs.push(derive_tid);
+
     quote!(#struct_kind).into()
 }
