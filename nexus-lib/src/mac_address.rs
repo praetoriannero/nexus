@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 const MAC_ADDR_SIZE: usize = 6;
 
 #[derive(Debug, Clone, Copy)]
@@ -19,5 +21,17 @@ impl<'a> MacAddress<'a> {
 
     pub fn to_bytes(&self) -> [u8; 6] {
         self.address.clone()
+    }
+}
+
+impl<'a> Display for MacAddress<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (i, byte) in self.address.iter().enumerate() {
+            if i != 0 {
+                write!(f, ":")?;
+            }
+            write!(f, "{:02X}", byte)?;
+        }
+        Ok(())
     }
 }

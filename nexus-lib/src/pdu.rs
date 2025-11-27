@@ -50,6 +50,17 @@ impl<'a> dyn Pdu<'a> + 'a {
         None
     }
 
+    pub fn find_mut<T: Pdu<'a> + 'a>(&mut self) -> Option<&'a mut T> {
+        if self.self_id() == T::id() {
+            return unsafe { Some(&mut *(self as *mut _ as *mut T)) };
+        } else {
+            if let Some(child) = self.child_pdu() {
+                return child.find_mut::<T>();
+            }
+        }
+        None
+    }
+
     pub fn downcast_ref<T: Pdu<'a> + 'a>(&self) -> Option<&'a T> {
         if self.self_id() == T::id() {
             unsafe { Some(&*(self as *const _ as *const T)) }

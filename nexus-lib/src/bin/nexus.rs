@@ -23,12 +23,12 @@ fn main() {
             continue;
         };
         if let Some(eth_pdu2) = eth_pdu.as_mut_pdu().find::<Ethernet>() {
-            println!("{:?}", eth_pdu2.dst_addr());
+            println!("{}", eth_pdu2.dst_addr());
         }
-        // let Some(inner) = eth_pdu.child_pdu() else {
-        //     continue;
-        // };
-        // let ip_pdu = inner.downcast_mut::<Ip>().unwrap();
-        // println!("{}", ip_pdu.src_addr());
+        let Some(inner) = eth_pdu.child_pdu() else {
+            continue;
+        };
+        let ip_pdu = inner.downcast_mut::<Ip>().unwrap();
+        println!("{}", ip_pdu.src_addr());
     }
 }
