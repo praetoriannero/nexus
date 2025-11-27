@@ -34,36 +34,7 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
     {
         Box::new(self)
     }
-
-    //
-    // fn search(&self, type_id: TypeId) -> Option<&dyn Pdu<'a>>
-    // where
-    //     Self: Sized,
-    // {
-    //     if self.self_id() == type_id {
-    //         return Some(self);
-    //     } else {
-    //         if let Some(child) = self.child_pdu() {
-    //             return child.search(type_id);
-    //         }
-    //     }
-    //
-    //     None
-    // }
 }
-
-pub trait PduTid<'a>: Pdu<'a> + Tid<'a> + 'a {}
-
-// pub fn find_pdu<'a, T, U>(p: &'a mut T) -> Pob<'a>
-// where
-//     T: PduTid<'a>,
-//     U: PduTid<'a>,
-// {
-//     let mut chain: Vec<Pob<'a>> = Vec::new();
-//     // chain.iter().find(|p| p.type_id() == T::type_id())
-//     None
-// }
-//
 
 pub type Pob<'a> = Option<Box<dyn Pdu<'a> + 'a>>;
 
@@ -76,9 +47,9 @@ impl<'a> dyn Pdu<'a> + 'a {
                 return child.find::<T>();
             }
         }
-
         None
     }
+
     pub fn downcast_ref<T: Pdu<'a> + 'a>(&self) -> Option<&'a T> {
         if self.self_id() == T::id() {
             unsafe { Some(&*(self as *const _ as *const T)) }
