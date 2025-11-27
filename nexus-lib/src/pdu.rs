@@ -20,13 +20,65 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
             child.pdu_chain(chain);
         }
     }
+
+    fn as_mut_pdu(&mut self) -> Box<&mut dyn Pdu<'a>>
+    where
+        Self: Sized,
+    {
+        Box::new(self)
+    }
+
+    fn as_pdu(&self) -> Box<&dyn Pdu<'a>>
+    where
+        Self: Sized,
+    {
+        Box::new(self)
+    }
+
+    //
+    // fn search(&self, type_id: TypeId) -> Option<&dyn Pdu<'a>>
+    // where
+    //     Self: Sized,
+    // {
+    //     if self.self_id() == type_id {
+    //         return Some(self);
+    //     } else {
+    //         if let Some(child) = self.child_pdu() {
+    //             return child.search(type_id);
+    //         }
+    //     }
+    //
+    //     None
+    // }
 }
 
-// pub fn find_pdu<T>() ->
+pub trait PduTid<'a>: Pdu<'a> + Tid<'a> + 'a {}
+
+// pub fn find_pdu<'a, T, U>(p: &'a mut T) -> Pob<'a>
+// where
+//     T: PduTid<'a>,
+//     U: PduTid<'a>,
+// {
+//     let mut chain: Vec<Pob<'a>> = Vec::new();
+//     // chain.iter().find(|p| p.type_id() == T::type_id())
+//     None
+// }
+//
 
 pub type Pob<'a> = Option<Box<dyn Pdu<'a> + 'a>>;
 
 impl<'a> dyn Pdu<'a> + 'a {
+    pub fn find<T: Pdu<'a> + 'a>(&mut self) -> Option<&'a T> {
+        if self.self_id() == T::id() {
+            return unsafe { Some(&*(self as *const _ as *const T)) };
+        } else {
+            if let Some(child) = self.child_pdu() {
+                return child.find::<T>();
+            }
+        }
+
+        None
+    }
     pub fn downcast_ref<T: Pdu<'a> + 'a>(&self) -> Option<&'a T> {
         if self.self_id() == T::id() {
             unsafe { Some(&*(self as *const _ as *const T)) }

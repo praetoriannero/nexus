@@ -35,8 +35,8 @@ impl<'a> Pdu<'a> for IpOption<'a> {
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
         Ok(Self {
-            data: Cow::Borrowed(&bytes),
-            header: Cow::Owned(Vec::new()),
+            header: Cow::Borrowed(&bytes),
+            data: Cow::Owned(Vec::new()),
             parent: None,
             child: None,
         })
