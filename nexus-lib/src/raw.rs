@@ -3,16 +3,14 @@ use std::borrow::Cow;
 
 use crate::error::ParseError;
 use crate::pdu::{Pdu, Pob};
-use nexus_macros::Tid;
+use nexus_macros::{Tid, pdu_impl, pdu_type};
 use nexus_tid::Tid;
 
 #[derive(Tid)]
-pub struct Raw<'a> {
-    data: Cow<'a, [u8]>,
-    parent: Pob<'a>,
-    child: Pob<'a>,
-}
+#[pdu_type]
+pub struct Raw<'a> {}
 
+#[pdu_impl]
 impl<'a> Pdu<'a> for Raw<'a> {
     fn to_bytes(&self) -> Vec<u8> {
         let mut res = Vec::new();
@@ -23,16 +21,9 @@ impl<'a> Pdu<'a> for Raw<'a> {
     fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
         Ok(Self {
             data: Cow::Borrowed(&bytes),
+            header: Cow::Owned(Vec::new()),
             parent: None,
             child: None,
         })
-    }
-
-    fn parent_pdu(&mut self) -> &mut Pob<'a> {
-        &mut self.parent
-    }
-
-    fn child_pdu(&mut self) -> &mut Pob<'a> {
-        &mut self.child
     }
 }

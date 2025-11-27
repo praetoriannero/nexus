@@ -5,7 +5,7 @@ use crate::raw::Raw;
 use crate::utils::parse_bytes;
 use std::any::TypeId;
 
-use nexus_macros::Tid;
+use nexus_macros::{Tid, pdu_impl, pdu_type};
 use nexus_tid::Tid;
 use num_enum::TryFromPrimitive;
 use std::borrow::Cow;
@@ -65,13 +65,10 @@ fn get_ether_type(bytes: &[u8]) -> u16 {
 }
 
 #[derive(Tid)]
-pub struct Ethernet<'a> {
-    header: Cow<'a, [u8]>,
-    data: Cow<'a, [u8]>,
-    parent: Pob<'a>,
-    child: Pob<'a>,
-}
+#[pdu_type]
+pub struct Ethernet<'a> {}
 
+#[pdu_impl]
 impl<'a> Pdu<'a> for Ethernet<'a> {
     fn to_bytes(&self) -> Vec<u8> {
         let mut res = Vec::new();
@@ -95,14 +92,6 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
             parent: None,
             child: Some(inner),
         })
-    }
-
-    fn parent_pdu(&mut self) -> &mut Pob<'a> {
-        &mut self.parent
-    }
-
-    fn child_pdu(&mut self) -> &mut Pob<'a> {
-        &mut self.child
     }
 }
 

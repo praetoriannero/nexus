@@ -3,7 +3,7 @@ use crate::pdu::{Pdu, Pob};
 use crate::utils::{Endian, parse_bytes};
 use std::any::TypeId;
 
-use nexus_macros::Tid;
+use nexus_macros::{Tid, pdu_impl, pdu_type};
 use nexus_tid::Tid;
 use std::borrow::Cow;
 use std::net::Ipv4Addr;
@@ -22,51 +22,46 @@ const IPV4_DST_ADDR_OFFSET: usize = 16;
 const IPV4_OPT_OFFSET: usize = 20;
 const IPV4_HEADER_LEN: usize = 20;
 
-#[derive(Debug, Clone)]
-pub struct IpOption<'a> {
-    header: Cow<'a, [u8]>,
-}
+#[pdu_type]
+#[derive(Tid)]
+pub struct IpOption<'a> {}
 
-impl<'a> IpOption<'a> {
-    pub fn from_bytes(bytes: &'a [u8]) -> Self {
-        Self {
-            header: Cow::Borrowed(&bytes),
-        }
+#[pdu_impl]
+impl<'a> Pdu<'a> for IpOption<'a> {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut res = Vec::new();
+        res.extend_from_slice(&self.data);
+        res
     }
 
-    pub fn to_bytes(&'a self) -> &'a [u8] {
-        &self.header
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
+        Ok(Self {
+            data: Cow::Borrowed(&bytes),
+            header: Cow::Owned(Vec::new()),
+            parent: None,
+            child: None,
+        })
     }
 }
 
+#[pdu_type]
 #[derive(Tid)]
 pub struct Ip<'a> {
-    header: Cow<'a, [u8]>,
     opts: Vec<IpOption<'a>>,
-    data: Cow<'a, [u8]>,
-    parent: Pob<'a>,
-    child: Pob<'a>,
 }
 
 fn get_ip_header_len<'a>(ip_header_bytes: &'a [u8]) -> usize {
     (ip_header_bytes[IPV4_VERSION_OFFSET] & 0xF) as usize * IPV4_BYTE_MULTIPLE
 }
 
+#[pdu_impl]
 impl<'a> Pdu<'a> for Ip<'a> {
     fn to_bytes(&self) -> Vec<u8> {
         let mut res = vec![0; IPV4_HEADER_LEN as usize];
         for idx in 0..self.opts.len() {
-            res.extend_from_slice(self.opts[idx].to_bytes());
+            res.extend_from_slice(&self.opts[idx].to_bytes());
         }
         res
-    }
-
-    fn parent_pdu(&mut self) -> &mut Pob<'a> {
-        &mut self.parent
-    }
-
-    fn child_pdu(&mut self) -> &mut Pob<'a> {
-        &mut self.child
     }
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
@@ -124,7 +119,7 @@ impl<'a> Ip<'a> {
     }
 
     pub fn set_ihl(&self, _ihl: u16) {
-        // TO-DO
+        todo!();
     }
 
     pub fn with_ihl(&mut self, ihl: u16) -> &mut Self {
@@ -137,7 +132,7 @@ impl<'a> Ip<'a> {
     }
 
     pub fn set_tos(&self, _tos: u8) {
-        // TO-DO
+        todo!();
     }
 
     pub fn with_tos(&mut self, tos: u8) -> &mut Self {
