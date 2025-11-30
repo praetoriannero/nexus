@@ -1,10 +1,11 @@
 use crate::error::ParseError;
+use crate::ip_opt::IpOption;
 use crate::pdu::{Pdu, Pob};
 use crate::utils::{Endian, parse_bytes};
-use std::any::TypeId;
 
 use nexus_macros::{Tid, pdu_impl, pdu_type};
 use nexus_tid::Tid;
+use std::any::TypeId;
 use std::borrow::Cow;
 use std::net::Ipv4Addr;
 
@@ -22,38 +23,13 @@ const IPV4_DST_ADDR_OFFSET: usize = 16;
 const IPV4_OPT_OFFSET: usize = 20;
 const IPV4_HEADER_LEN: usize = 20;
 
-#[pdu_type]
-pub struct IpOption<'a> {}
-
-#[pdu_impl]
-impl<'a> Pdu<'a> for IpOption<'a> {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut res = Vec::new();
-        res.extend_from_slice(&self.data);
-        res
-    }
-
-    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
-        Ok(Self {
-            header: Cow::Borrowed(&bytes),
-            data: Cow::Owned(Vec::new()),
-            parent: None,
-            child: None,
-        })
-    }
-
-    fn to_json(&self) -> Result<String, serde_json::Error> {
-        todo!()
-    }
+fn get_ip_header_len<'a>(ip_header_bytes: &'a [u8]) -> usize {
+    (ip_header_bytes[IPV4_VERSION_OFFSET] & 0xF) as usize * IPV4_BYTE_MULTIPLE
 }
 
 #[pdu_type]
 pub struct Ip<'a> {
     opts: Vec<IpOption<'a>>,
-}
-
-fn get_ip_header_len<'a>(ip_header_bytes: &'a [u8]) -> usize {
-    (ip_header_bytes[IPV4_VERSION_OFFSET] & 0xF) as usize * IPV4_BYTE_MULTIPLE
 }
 
 #[pdu_impl]
