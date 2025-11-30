@@ -124,11 +124,13 @@ impl<'a> Ip<'a> {
         ihl as u16
     }
 
-    pub fn set_ihl(&self, _ihl: u16) {
-        todo!();
+    pub fn set_ihl(&mut self, ihl: u8) {
+        let ihl_byte = &mut self.header.to_mut()[IPV4_VERSION_OFFSET];
+        *ihl_byte &= 0xF0;
+        *ihl_byte &= ihl;
     }
 
-    pub fn with_ihl(&mut self, ihl: u16) -> &mut Self {
+    pub fn with_ihl(&mut self, ihl: u8) -> &mut Self {
         self.set_ihl(ihl);
         self
     }
@@ -147,16 +149,33 @@ impl<'a> Ip<'a> {
     }
 
     pub fn dscp(&self) -> u8 {
-        self.tos() >> 6
+        self.tos() >> 2
     }
 
     pub fn set_dscp(&mut self, dscp: u8) {
         let tos = &mut self.header.to_mut()[IPV4_TOS_OFFSET];
-        *tos &= 0xF;
+        *tos &= 0x0000_0011;
+        *tos &= dscp;
+    }
+
+    pub fn with_dscp(&mut self, dscp: u8) -> &mut Self {
+        self.set_dscp(dscp);
+        self
     }
 
     pub fn ecn(&self) -> u8 {
-        self.tos() & 0xF
+        self.tos() & 0b0000_0011
+    }
+
+    pub fn set_ecn(&mut self, ecn: u8) {
+        let tos = &mut self.header.to_mut()[IPV4_TOS_OFFSET];
+        *tos &= 0b1111_1100;
+        *tos &= ecn;
+    }
+
+    pub fn with_ecn(&mut self, ecn: u8) -> &mut Self {
+        self.set_ecn(ecn);
+        self
     }
 
     pub fn total_len(&self) -> u16 {
@@ -166,6 +185,16 @@ impl<'a> Ip<'a> {
         )
     }
 
+    pub fn set_total_len(&mut self, total_len: u16) {
+        self.header.to_mut()[IPV4_TOTAL_LEN_OFFSET..IPV4_ID_OFFSET]
+            .copy_from_slice(&total_len.to_be_bytes());
+    }
+
+    pub fn with_total_len(&mut self, total_len: u16) -> &mut Self {
+        self.set_total_len(total_len);
+        self
+    }
+
     pub fn id(&self) -> u16 {
         parse_bytes::<u16>(
             &self.header[IPV4_ID_OFFSET..IPV4_FRAG_FLAG_OFFSET],
@@ -173,20 +202,73 @@ impl<'a> Ip<'a> {
         )
     }
 
+    pub fn set_id(&mut self, id: u16) {
+        self.header.to_mut()[IPV4_ID_OFFSET..IPV4_FRAG_FLAG_OFFSET]
+            .copy_from_slice(&id.to_be_bytes());
+    }
+
+    pub fn with_id(&mut self, id: u16) -> &mut Self {
+        self.set_id(id);
+        self
+    }
+
     pub fn flags(&self) -> u8 {
         self.header[IPV4_FRAG_FLAG_OFFSET] >> 5
+    }
+
+    pub fn set_flags(&mut self, flags: u8) {
+        self.header.to_mut()[IPV4_FRAG_FLAG_OFFSET..IPV4_FRAG_FLAG_OFFSET + 1]
+            .copy_from_slice(&flags.to_be_bytes());
+    }
+
+    pub fn with_flags(&mut self, flags: u8) -> &mut Self {
+        self.set_flags(flags);
+        self
     }
 
     pub fn rf(&self) -> bool {
         ((self.flags() >> 2) & 0b1) != 0
     }
 
+    pub fn set_rf(&mut self, rf: u8) {
+        let flags_byte = &mut self.header.to_mut()[IPV4_FRAG_FLAG_OFFSET];
+        *flags_byte &= 0b0111_1111;
+        *flags_byte &= rf;
+    }
+
+    pub fn with_rf(&mut self, rf: u8) -> &mut Self {
+        self.set_rf(rf);
+        self
+    }
+
     pub fn df(&self) -> bool {
         ((self.flags() >> 1) & 0b1) != 0
     }
 
+    pub fn set_df(&mut self, df: u8) {
+        let flags_byte = &mut self.header.to_mut()[IPV4_FRAG_FLAG_OFFSET];
+        *flags_byte &= 0b1011_1111;
+        *flags_byte &= df;
+    }
+
+    pub fn with_df(&mut self, df: u8) -> &mut Self {
+        self.set_df(df);
+        self
+    }
+
     pub fn mf(&self) -> bool {
         (self.flags() & 0x1) != 0
+    }
+
+    pub fn set_mf(&mut self, mf: u8) {
+        let flags_byte = &mut self.header.to_mut()[IPV4_FRAG_FLAG_OFFSET];
+        *flags_byte &= 0b1101_1111;
+        *flags_byte &= mf;
+    }
+
+    pub fn with_mf(&mut self, mf: u8) -> &mut Self {
+        self.set_mf(mf);
+        self
     }
 
     pub fn frag_offset(&self) -> u16 {
