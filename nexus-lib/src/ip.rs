@@ -52,6 +52,8 @@ impl<'a> Pdu<'a> for Ip<'a> {
             return Err(ParseError::NotEnoughData);
         }
 
+        // TODO: actually parse the options
+
         let result = Self {
             opts: Vec::new(),
             data: Cow::Borrowed(&bytes[header_len..]),
