@@ -3,11 +3,13 @@ use crate::ip::Ip;
 use crate::mac_address::MacAddress;
 use crate::pdu::{Pdu, Pob};
 use crate::raw::Raw;
-use crate::utils::parse_bytes;
+use crate::utils::{parse_bytes, printable_ascii};
 
 use nexus_macros::{Tid, pdu_impl, pdu_type};
 use nexus_tid::Tid;
 use num_enum::TryFromPrimitive;
+use serde::Serialize;
+use serde::ser::SerializeStruct;
 use std::any::TypeId;
 use std::borrow::Cow;
 use std::convert::TryFrom;
@@ -27,11 +29,17 @@ pub enum EtherType {
 
 fn pdu_from_type<'a>(ether_type: u16, bytes: &'a [u8]) -> Pob<'a> {
     let Ok(et) = EtherType::try_from(ether_type) else {
-        return Some(Box::new(Raw::from_bytes(bytes).unwrap()));
+        return Some(Box::new(
+            Raw::from_bytes(bytes).expect("Failed to create Raw PDU type"),
+        ));
     };
     match et {
-        EtherType::Ipv4 => Some(Box::new(Ip::from_bytes(bytes).unwrap())),
-        _ => Some(Box::new(Raw::from_bytes(bytes).unwrap())),
+        EtherType::Ipv4 => Some(Box::new(
+            Ip::from_bytes(bytes).expect("Failed to create IPv4 PDU type"),
+        )),
+        _ => Some(Box::new(
+            Raw::from_bytes(bytes).expect("Failed to create Raw PDU type"),
+        )),
     }
 }
 
@@ -70,6 +78,10 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
             child: Some(inner),
         })
     }
+
+    fn to_json(&self) -> Result<String, serde_json::Error> {
+        todo!()
+    }
 }
 
 impl<'a> Ethernet<'a> {
@@ -90,10 +102,10 @@ impl<'a> Ethernet<'a> {
     pub fn set_dst_addr(&mut self, dst_addr: MacAddress) {
         dst_addr
             .into_buff(&mut self.header.to_mut()[..ETH_DST_OFFSET])
-            .unwrap();
+            .expect("Failed to set destination MAC address");
     }
 
-    pub fn dst_addr(&'a self) -> MacAddress<'a> {
+    pub fn dst_addr(&self) -> MacAddress<'_> {
         MacAddress::from_bytes(&self.header[ETH_DST_OFFSET..ETH_SRC_OFFSET])
     }
 
@@ -105,10 +117,10 @@ impl<'a> Ethernet<'a> {
     pub fn set_src_addr(&mut self, src_addr: MacAddress) {
         src_addr
             .into_buff(&mut self.header.to_mut()[ETH_DST_OFFSET..ETH_SRC_OFFSET])
-            .unwrap();
+            .expect("Failed to set source MAC address");
     }
 
-    pub fn src_addr(&'a self) -> MacAddress<'a> {
+    pub fn src_addr(&self) -> MacAddress<'_> {
         MacAddress::from_bytes(&self.header[ETH_SRC_OFFSET..ETH_TYPE_OFFSET])
     }
 
@@ -132,5 +144,19 @@ impl<'a> Ethernet<'a> {
 
     pub fn set_payload(&mut self, payload: &[u8]) {
         self.data.to_mut().copy_from_slice(payload);
+    }
+}
+
+impl Serialize for Ethernet<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut s = serializer.serialize_struct("Ethernet", 4)?;
+        s.serialize_field("eth.dst", &self.dst_addr().to_str())?;
+        s.serialize_field("eth.src", &self.src_addr().to_str())?;
+        s.serialize_field("eth.type", &self.ether_type())?;
+        s.serialize_field("eth.data", &printable_ascii(self.payload()))?;
+        s.end()
     }
 }

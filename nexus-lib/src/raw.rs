@@ -25,4 +25,8 @@ impl<'a> Pdu<'a> for Raw<'a> {
             child: None,
         })
     }
+
+    fn to_json(&self) -> Result<String, serde_json::Error> {
+        todo!()
+    }
 }

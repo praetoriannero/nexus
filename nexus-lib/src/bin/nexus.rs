@@ -4,6 +4,7 @@ use nexus_lib::ip::Ip;
 use nexus_lib::pdu::Pdu;
 use nexus_lib::utils::printable_ascii;
 use pcap::Capture;
+use serde_json;
 
 fn main() {
     let mut cap = Capture::from_file("./data/test.pcapng").unwrap();
@@ -17,13 +18,17 @@ fn main() {
         let Ok(mut eth_pdu) = Ethernet::from_bytes(&packet.data) else {
             continue;
         };
+        println!("{}", serde_json::to_string_pretty(&eth_pdu).unwrap());
         if let Some(ip_pdu) = eth_pdu.as_mut_pdu().find::<Ip>() {
             println!("{}", ip_pdu.src_addr());
         } else {
             continue;
         };
-        if let Some(eth_pdu2) = eth_pdu.as_mut_pdu().find::<Ethernet>() {
-            println!("{}", eth_pdu2.dst_addr());
+        if let Some(eth_pdu2) = eth_pdu.as_mut_pdu().find_mut::<Ethernet>() {
+            println!("here!");
+            println!("{}", eth_pdu2.ether_type());
+            eth_pdu2.set_ether_type(1);
+            println!("{}", eth_pdu2.ether_type());
         }
         let Some(inner) = eth_pdu.child_pdu() else {
             continue;

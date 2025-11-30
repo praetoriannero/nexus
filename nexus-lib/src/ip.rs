@@ -41,6 +41,10 @@ impl<'a> Pdu<'a> for IpOption<'a> {
             child: None,
         })
     }
+
+    fn to_json(&self) -> Result<String, serde_json::Error> {
+        todo!()
+    }
 }
 
 #[pdu_type]
@@ -81,6 +85,10 @@ impl<'a> Pdu<'a> for Ip<'a> {
         };
 
         Ok(result)
+    }
+
+    fn to_json(&self) -> Result<String, serde_json::Error> {
+        todo!()
     }
 }
 
@@ -129,8 +137,8 @@ impl<'a> Ip<'a> {
         self.header[IPV4_TOS_OFFSET]
     }
 
-    pub fn set_tos(&self, _tos: u8) {
-        todo!();
+    pub fn set_tos(&mut self, tos: u8) {
+        self.header.to_mut()[IPV4_TOS_OFFSET] = tos;
     }
 
     pub fn with_tos(&mut self, tos: u8) -> &mut Self {
@@ -139,7 +147,12 @@ impl<'a> Ip<'a> {
     }
 
     pub fn dscp(&self) -> u8 {
-        self.tos() >> 4
+        self.tos() >> 6
+    }
+
+    pub fn set_dscp(&mut self, dscp: u8) {
+        let tos = &mut self.header.to_mut()[IPV4_TOS_OFFSET];
+        *tos &= 0xF;
     }
 
     pub fn ecn(&self) -> u8 {

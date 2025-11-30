@@ -1,8 +1,9 @@
+use serde::Serialize;
 use std::fmt::Display;
 
 const MAC_ADDR_SIZE: usize = 6;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct MacAddress<'a> {
     address: &'a [u8; MAC_ADDR_SIZE],
 }
@@ -21,6 +22,11 @@ impl<'a> MacAddress<'a> {
 
     pub fn to_bytes(&self) -> [u8; 6] {
         self.address.clone()
+    }
+
+    pub fn to_str(&self) -> String {
+        let str_nums: Vec<String> = self.address.iter().map(|n| format!("{:02X}", n)).collect();
+        str_nums.join(":").clone()
     }
 }
 

@@ -8,6 +8,8 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
     where
         Self: Sized;
 
+    fn to_json(&self) -> Result<String, serde_json::error::Error>;
+
     fn to_bytes(&self) -> Vec<u8>;
 
     fn parent_pdu(&mut self) -> &mut Pob<'a>;
