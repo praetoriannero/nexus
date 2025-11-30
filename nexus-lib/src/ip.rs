@@ -278,12 +278,40 @@ impl<'a> Ip<'a> {
         ) & 0x1FFF
     }
 
+    pub fn set_frag_offset(&mut self, offset: u16) {
+        self.header.to_mut()[IPV4_FRAG_FLAG_OFFSET..IPV4_TTL_OFFSET]
+            .copy_from_slice(&offset.to_be_bytes());
+    }
+
+    pub fn with_frag_offset(&mut self, offset: u16) -> &mut Self {
+        self.set_frag_offset(offset);
+        self
+    }
+
     pub fn ttl(&self) -> u8 {
         self.header[IPV4_TTL_OFFSET]
     }
 
+    pub fn set_ttl(&mut self, ttl: u8) {
+        self.header.to_mut()[IPV4_TTL_OFFSET] = ttl;
+    }
+
+    pub fn with_ttl(&mut self, ttl: u8) -> &mut Self {
+        self.set_ttl(ttl);
+        self
+    }
+
     pub fn protocol(&self) -> u8 {
         self.header[IPV4_PROTO_OFFSET]
+    }
+
+    pub fn set_protocol(&mut self, protocol: u8) {
+        self.header.to_mut()[IPV4_PROTO_OFFSET] = protocol;
+    }
+
+    pub fn with_protocol(&mut self, protocol: u8) -> &mut Self {
+        self.set_protocol(protocol);
+        self
     }
 
     pub fn checksum(&self) -> u16 {
@@ -293,6 +321,16 @@ impl<'a> Ip<'a> {
         )
     }
 
+    pub fn set_checksum(&mut self, checksum: u16) {
+        self.header.to_mut()[IPV4_CHECKSUM_OFFSET..IPV4_SRC_ADDR_OFFSET]
+            .copy_from_slice(&checksum.to_be_bytes());
+    }
+
+    pub fn with_checksum(&mut self, checksum: u16) -> &mut Self {
+        self.set_checksum(checksum);
+        self
+    }
+
     pub fn src_addr(&self) -> Ipv4Addr {
         Ipv4Addr::from_bits(parse_bytes(
             &self.header[IPV4_SRC_ADDR_OFFSET..IPV4_DST_ADDR_OFFSET],
@@ -300,11 +338,31 @@ impl<'a> Ip<'a> {
         ))
     }
 
+    pub fn set_src_addr(&mut self, src_addr: Ipv4Addr) {
+        self.header.to_mut()[IPV4_SRC_ADDR_OFFSET..IPV4_DST_ADDR_OFFSET]
+            .copy_from_slice(&(src_addr.to_bits()).to_be_bytes());
+    }
+
+    pub fn with_src_addr(&mut self, src_addr: Ipv4Addr) -> &mut Self {
+        self.set_src_addr(src_addr);
+        self
+    }
+
     pub fn dst_addr(&self) -> Ipv4Addr {
         Ipv4Addr::from_bits(parse_bytes(
             &self.header[IPV4_DST_ADDR_OFFSET..IPV4_OPT_OFFSET],
             Endian::Big,
         ))
+    }
+
+    pub fn set_dst_addr(&mut self, dst_addr: Ipv4Addr) {
+        self.header.to_mut()[IPV4_DST_ADDR_OFFSET..IPV4_OPT_OFFSET]
+            .copy_from_slice(&(dst_addr.to_bits()).to_be_bytes());
+    }
+
+    pub fn with_dst_addr(&mut self, dst_addr: Ipv4Addr) -> &mut Self {
+        self.set_dst_addr(dst_addr);
+        self
     }
 
     pub fn payload(&self) -> &[u8] {
