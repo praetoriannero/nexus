@@ -8,5 +8,6 @@ proc-macro = true
 
 
 [dependencies]
+num = "0.4.3"
 quote = "1.0.42"
 syn = "2.0.111"
