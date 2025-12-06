@@ -27,7 +27,7 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
         }
     }
 
-    fn as_mut_pdu(&mut self) -> Box<&mut dyn Pdu<'a>>
+    fn as_pdu_mut(&mut self) -> Box<&mut dyn Pdu<'a>>
     where
         Self: Sized,
     {
