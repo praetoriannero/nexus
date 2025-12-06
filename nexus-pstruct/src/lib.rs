@@ -2,6 +2,8 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, ItemImpl, parse_macro_input};
 
+pub(crate) mod types;
+
 #[proc_macro_derive(Protocol, attributes(field))]
 pub fn derive_protocol(input: TokenStream) -> TokenStream {
     let input_struct = parse_macro_input!(input as DeriveInput);
@@ -17,11 +19,11 @@ pub fn derive_protocol(input: TokenStream) -> TokenStream {
         bit_offset: usize,
         size: usize,
         bit_field: bool,
-        depends_on: Option<String>,
+        activate: Option<String>,
         repeated: bool,
     }
 
-    // let mut generated_methods = Vec::new();
+    let mut generated_methods: Vec<TokenStream> = Vec::new();
 
     for field in bitfields {
         let ident = field.ident.as_ref().unwrap();
@@ -31,7 +33,7 @@ pub fn derive_protocol(input: TokenStream) -> TokenStream {
             bit_offset: 0,
             size: 0,
             bit_field: false,
-            depends_on: None,
+            activate: None,
             repeated: false,
         };
 
@@ -47,8 +49,5 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+    fn it_works() {}
 }

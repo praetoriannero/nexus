@@ -37,17 +37,31 @@ pub fn pdu_impl(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut impl_block = parse_macro_input!(item as ItemImpl);
 
     let pdu_link_parent_method: syn::ImplItem = syn::parse_quote! {
-        fn parent_pdu(&mut self) -> &mut Pob<'a> {
+        fn parent_pdu(&self) -> &Pob<'a> {
+            &self.parent
+        }
+    };
+
+    let pdu_link_parent_mut_method: syn::ImplItem = syn::parse_quote! {
+        fn parent_pdu_mut(&mut self) -> &mut Pob<'a> {
             &mut self.parent
         }
     };
 
     let pdu_link_child_method: syn::ImplItem = syn::parse_quote! {
-        fn child_pdu(&mut self) -> &mut Pob<'a> {
+        fn child_pdu(&self) -> &Pob<'a> {
+            &self.child
+        }
+    };
+
+    let pdu_link_child_mut_method: syn::ImplItem = syn::parse_quote! {
+        fn child_pdu_mut(&mut self) -> &mut Pob<'a> {
             &mut self.child
         }
     };
 
+    impl_block.items.push(pdu_link_child_mut_method);
+    impl_block.items.push(pdu_link_parent_mut_method);
     impl_block.items.push(pdu_link_parent_method);
     impl_block.items.push(pdu_link_child_method);
 

@@ -12,13 +12,17 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
 
     fn to_bytes(&self) -> Vec<u8>;
 
-    fn parent_pdu(&mut self) -> &mut Pob<'a>;
+    fn parent_pdu_mut(&mut self) -> &mut Pob<'a>;
 
-    fn child_pdu(&mut self) -> &mut Pob<'a>;
+    fn parent_pdu(&self) -> &Pob<'a>;
+
+    fn child_pdu_mut(&mut self) -> &mut Pob<'a>;
+
+    fn child_pdu(&self) -> &Pob<'a>;
 
     fn pdu_chain(&mut self, chain: &mut Vec<TypeId>) {
         chain.push(self.self_id());
-        if let Some(child) = self.child_pdu() {
+        if let Some(child) = self.child_pdu_mut() {
             child.pdu_chain(chain);
         }
     }
@@ -41,7 +45,7 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
 pub type Pob<'a> = Option<Box<dyn Pdu<'a> + 'a>>;
 
 impl<'a> dyn Pdu<'a> + 'a {
-    pub fn find<T: Pdu<'a> + 'a>(&mut self) -> Option<&'a T> {
+    pub fn find<T: Pdu<'a> + 'a>(&self) -> Option<&'a T> {
         if self.self_id() == T::id() {
             return unsafe { Some(&*(self as *const _ as *const T)) };
         } else {
@@ -56,7 +60,7 @@ impl<'a> dyn Pdu<'a> + 'a {
         if self.self_id() == T::id() {
             return unsafe { Some(&mut *(self as *mut _ as *mut T)) };
         } else {
-            if let Some(child) = self.child_pdu() {
+            if let Some(child) = self.child_pdu_mut() {
                 return child.find_mut::<T>();
             }
         }

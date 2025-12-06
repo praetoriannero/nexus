@@ -30,7 +30,7 @@ fn main() {
             eth_pdu2.set_ether_type(1);
             println!("{}", eth_pdu2.ether_type());
         }
-        let Some(inner) = eth_pdu.child_pdu() else {
+        let Some(inner) = eth_pdu.child_pdu_mut() else {
             continue;
         };
         let ip_pdu = inner.downcast_mut::<Ip>().unwrap();
