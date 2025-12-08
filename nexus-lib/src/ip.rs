@@ -1,19 +1,10 @@
-use crate::error::ParseError;
 use crate::ethernet::{ETHER_DISSECTION_TABLE, EtherType};
 use crate::ip_opt::IpOption;
-use crate::pdu::{Pdu, PduBuilder, PduResult, Pob, pdu_trait_assert};
+use crate::prelude::*;
 use crate::register_eth_type;
 use crate::utils::{Endian, parse_bytes};
 
-use ctor::ctor;
-use nexus_macros::{Tid, pdu_impl, pdu_type};
-use nexus_tid::Tid;
-use paste::paste;
-use std::any::TypeId;
-use std::borrow::Cow;
-use std::collections::HashMap;
 use std::net::Ipv4Addr;
-use std::sync::{LazyLock, RwLock};
 
 pub const IPV4_BYTE_MULTIPLE: usize = 4;
 const IPV4_VERSION_OFFSET: usize = 0;
@@ -38,6 +29,21 @@ pub struct Ip<'a> {
     opts: Vec<IpOption<'a>>,
 }
 
+fn get_ip_type<'a>(bytes: &'a [u8]) -> u8 {
+    // TODO: shouldn't assume we have the proper amount of data
+    bytes[IPV4_PROTO_OFFSET]
+}
+
+fn pdu_from_type<'a>(ether_type: Ipv4Type, bytes: &'a [u8]) -> Pob<'a> {
+    // TODO: replace unwrap() with proper error handling
+    let table = IPV4_DISSECTION_TABLE.read().unwrap();
+    if let Some(builder) = table.get(&ether_type) {
+        builder(bytes).ok()
+    } else {
+        Raw::from_bytes(bytes).ok()
+    }
+}
+
 #[pdu_impl]
 impl<'a> Pdu<'a> for Ip<'a> {
     fn to_bytes(&self) -> Vec<u8> {
@@ -58,13 +64,18 @@ impl<'a> Pdu<'a> for Ip<'a> {
             return Err(ParseError::NotEnoughData);
         }
 
+        let Some(inner) = pdu_from_type(Ipv4Type(get_ip_type(bytes)), &bytes[IPV4_HEADER_LEN..])
+        else {
+            return Err(ParseError::UnsupportedProtocol);
+        };
+
         // TODO: actually parse the options
 
         let result = Self {
             opts: Vec::new(),
             data: Cow::Borrowed(&bytes[header_len..]),
             header: Cow::Borrowed(&bytes[..header_len]),
-            child: None,
+            child: Some(inner),
             parent: None,
         };
 
@@ -72,7 +83,11 @@ impl<'a> Pdu<'a> for Ip<'a> {
     }
 
     fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
-        todo!()
+        Ok(json!({
+            "ip": {
+                "ip.data": self.child_pdu().as_ref().unwrap().to_json().unwrap(),
+            }
+        }))
     }
 }
 

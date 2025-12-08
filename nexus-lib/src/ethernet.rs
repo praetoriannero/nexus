@@ -1,15 +1,5 @@
-use crate::error::ParseError;
 use crate::mac_address::MacAddress;
-use crate::pdu::{Pdu, PduBuilder, Pob};
-use crate::raw::Raw;
-use crate::utils::parse_bytes;
-
-use nexus_macros::{Tid, pdu_impl, pdu_type};
-use nexus_tid::Tid;
-use std::any::TypeId;
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::sync::{LazyLock, RwLock};
+use crate::prelude::*;
 
 const ETH_DST_OFFSET: usize = 0;
 const ETH_SRC_OFFSET: usize = 6;
@@ -91,7 +81,14 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
     }
 
     fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
-        todo!()
+        Ok(json!({
+            "eth": {
+                "eth.src_addr": self.src_addr().to_string(),
+                "eth.dst_addr": self.dst_addr().to_string(),
+                "eth.type": self.ether_type(),
+                "eth.data": self.child_pdu().as_ref().unwrap().to_json().unwrap(),
+            }
+        }))
     }
 }
 

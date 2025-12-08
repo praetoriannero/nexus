@@ -24,7 +24,7 @@ pub const REC: u8 = 7;
 pub const SID: u8 = 8;
 pub const ITS: u8 = 4;
 
-/// Refer to https://datatracker.ietf.org/doc/html/rfc791#section-3.1
+/// Refer to <https://datatracker.ietf.org/doc/html/rfc791#section-3.1>
 pub fn get_ip_opt_length(bytes: &[u8]) -> Result<usize, ParseError> {
     let opt_len = match get_ip_opt_type(bytes) {
         END => 1,

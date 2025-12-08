@@ -2,6 +2,7 @@ pub mod error;
 pub mod ethernet;
 pub mod icmp;
 pub mod ip;
+pub mod ip6;
 pub mod ip_opt;
 pub mod mac_address;
 pub mod packet;

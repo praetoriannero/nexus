@@ -1,12 +1,4 @@
-use crate::error::ParseError;
-use crate::pdu::{Pdu, Pob};
-use crate::utils::printable_ascii;
-
-use nexus_macros::{Tid, pdu_impl, pdu_type};
-use nexus_tid::Tid;
-use serde_json::json;
-use std::any::TypeId;
-use std::borrow::Cow;
+use crate::prelude::*;
 
 #[pdu_type]
 pub struct Raw<'a> {}
@@ -30,7 +22,9 @@ impl<'a> Pdu<'a> for Raw<'a> {
 
     fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
         Ok(json!({
-            "data": printable_ascii(&self.data)
+            "raw": {
+                "raw.data": printable_ascii(&self.data),
+            }
         }))
     }
 }

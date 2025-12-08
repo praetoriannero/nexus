@@ -2,7 +2,7 @@ use crate::ip::{IPV4_DISSECTION_TABLE, Ipv4Type};
 use crate::prelude::*;
 use crate::register_ipv4_type;
 
-pub const UDP_HEADER_LEN: usize = 32;
+pub const UDP_HEADER_LEN: usize = 8;
 const UDP_SPORT_OFFSET: usize = 0;
 const UDP_DPORT_OFFSET: usize = 2;
 const UDP_LENGTH_OFFSET: usize = 4;
@@ -21,6 +21,7 @@ impl<'a> Pdu<'a> for Udp<'a> {
     }
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
+        // TODO: add dissection table logic
         Ok(Box::new(Self {
             data: Cow::Borrowed(&bytes[UDP_HEADER_LEN..]),
             header: Cow::Borrowed(&bytes[..UDP_HEADER_LEN]),
@@ -31,7 +32,13 @@ impl<'a> Pdu<'a> for Udp<'a> {
 
     fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
         Ok(json!({
-            "data": printable_ascii(&self.data)
+            "udp": {
+                "udp.sport": self.src_port(),
+                "udp.dport": self.dst_port(),
+                "udp.length": self.length(),
+                "udp.checksum": self.checksum(),
+                "udp.data": printable_ascii(&self.data)
+            }
         }))
     }
 }
@@ -95,12 +102,17 @@ impl<'a> Udp<'a> {
         )
     }
 
-    pub fn set_checksum(&mut self, checksum: u16) {
-        self.header.to_mut()[UDP_CHECKSUM_OFFSET..UDP_HEADER_LEN]
-            .copy_from_slice(&checksum.to_be_bytes());
+    /// Set checkum to None if you want it to be autocalculated
+    pub fn set_checksum(&mut self, checksum: Option<u16>) {
+        if let Some(chksum) = checksum {
+            self.header.to_mut()[UDP_CHECKSUM_OFFSET..UDP_HEADER_LEN]
+                .copy_from_slice(&chksum.to_be_bytes());
+        } else {
+            ()
+        }
     }
 
-    pub fn with_checksum(&mut self, checksum: u16) -> &mut Self {
+    pub fn with_checksum(&mut self, checksum: Option<u16>) -> &mut Self {
         self.set_checksum(checksum);
         self
     }
