@@ -1,0 +1,5 @@
+Dissector Tables
+- should be able to add and remove entries
+- - allows reconfiguring dissection process as the user would like
+- could be a type alias or their own type
+
