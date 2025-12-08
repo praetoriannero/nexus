@@ -410,6 +410,8 @@ register_eth_type!(EtherType(0x0800), Ip);
 
 #[cfg(test)]
 mod tests {
+    use crate::pdu::deserialize;
+
     use super::*;
 
     const IPV4_TCP_HELLO: [u8; 45] = [
@@ -444,35 +446,35 @@ mod tests {
     #[test]
     fn test_ip_get_version() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap().downcast::<Ip>().unwrap();
+        let ip_pdu = deserialize::<Ip>(ip_bytes).unwrap();
         assert!(ip_pdu.version() == 4);
     }
 
     #[test]
     fn test_ip_get_ihl() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap().downcast::<Ip>().unwrap();
+        let ip_pdu = deserialize::<Ip>(ip_bytes).unwrap();
         assert!(IPV4_HEADER_LEN == ip_pdu.ihl() as usize);
     }
 
     #[test]
     fn test_ip_get_tos() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap().downcast::<Ip>().unwrap();
+        let ip_pdu = deserialize::<Ip>(ip_bytes).unwrap();
         assert!(ip_pdu.tos() == 0x3c);
     }
 
     #[test]
     fn test_ip_get_dscp() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap().downcast::<Ip>().unwrap();
+        let ip_pdu = deserialize::<Ip>(ip_bytes).unwrap();
         assert!(ip_pdu.dscp() == 0b0000_1111);
     }
 
     #[test]
     fn test_ip_get_ecn() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap().downcast::<Ip>().unwrap();
+        let ip_pdu = deserialize::<Ip>(ip_bytes).unwrap();
         assert!(ip_pdu.ecn() == 0b0000_0000);
     }
 }
