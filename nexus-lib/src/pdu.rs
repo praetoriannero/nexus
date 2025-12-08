@@ -43,6 +43,10 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
     }
 }
 
+pub fn deserialize<'a, T: Pdu<'a>>(bytes: &'a [u8]) -> Option<T> {
+    T::from_bytes(bytes).ok()?.downcast::<T>().map(|p| *p)
+}
+
 pub fn pdu_trait_assert<'a, T: Pdu<'a>>() {}
 
 pub type PduBuilder = for<'a> fn(&'a [u8]) -> PduResult<'a>;
