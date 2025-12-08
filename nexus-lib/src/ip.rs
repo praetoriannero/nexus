@@ -1,13 +1,19 @@
 use crate::error::ParseError;
+use crate::ethernet::{ETHER_DISSECTION_TABLE, EtherType};
 use crate::ip_opt::IpOption;
-use crate::pdu::{Pdu, Pob};
+use crate::pdu::{Pdu, PduBuilder, PduResult, Pob, pdu_trait_assert};
+use crate::register_eth_type;
 use crate::utils::{Endian, parse_bytes};
 
+use ctor::ctor;
 use nexus_macros::{Tid, pdu_impl, pdu_type};
 use nexus_tid::Tid;
+use paste::paste;
 use std::any::TypeId;
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::net::Ipv4Addr;
+use std::sync::{LazyLock, RwLock};
 
 pub const IPV4_BYTE_MULTIPLE: usize = 4;
 const IPV4_VERSION_OFFSET: usize = 0;
@@ -42,7 +48,7 @@ impl<'a> Pdu<'a> for Ip<'a> {
         res
     }
 
-    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
         if bytes.len() < IPV4_HEADER_LEN {
             return Err(ParseError::NotEnoughData);
         }
@@ -62,10 +68,10 @@ impl<'a> Pdu<'a> for Ip<'a> {
             parent: None,
         };
 
-        Ok(result)
+        Ok(Box::new(result))
     }
 
-    fn to_json(&self) -> Result<String, serde_json::Error> {
+    fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
         todo!()
     }
 }
@@ -357,11 +363,38 @@ impl<'a> Ip<'a> {
     }
 }
 
+pub static IPV4_DISSECTION_TABLE: LazyLock<RwLock<HashMap<EtherType, PduBuilder>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
+
+#[macro_export]
+macro_rules! register_ipv4_type {
+    ($ip_type:expr, $builder:ident) => {
+        paste! {
+            #[ctor]
+            fn [<__nexus_register_ether_type_ $builder:lower>]() {
+                pdu_trait_assert::<$builder>();
+                if IPV4_DISSECTION_TABLE
+                    .write()
+                    .unwrap()
+                    .insert($ip_type, |bytes: &'_ [u8]| -> PduResult<'_> {
+                        $builder::from_bytes(bytes)
+                    })
+                    .is_some()
+                {
+                    panic!("IPv4 types can only be added once.")
+                };
+            }
+        }
+    };
+}
+
+register_eth_type!(EtherType(0x0800), Ip);
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    static IPV4_TCP_HELLO: [u8; 45] = [
+    const IPV4_TCP_HELLO: [u8; 45] = [
         // IPv4 header (20 bytes)
         0x45, 0x3c, // Version/IHL, DSCP/ECN
         0x00, 0x2D, // Total Length = 45 bytes
@@ -384,6 +417,7 @@ mod tests {
         // Payload: "hello"
         0x68, 0x65, 0x6C, 0x6C, 0x6F,
     ];
+
     #[test]
     fn test_ip_from_bytes() {
         Ip::from_bytes(&IPV4_TCP_HELLO).unwrap();
@@ -392,35 +426,35 @@ mod tests {
     #[test]
     fn test_ip_get_version() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap();
+        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap().downcast::<Ip>().unwrap();
         assert!(ip_pdu.version() == 4);
     }
 
     #[test]
     fn test_ip_get_ihl() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap();
+        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap().downcast::<Ip>().unwrap();
         assert!(IPV4_HEADER_LEN == ip_pdu.ihl() as usize);
     }
 
     #[test]
     fn test_ip_get_tos() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap();
+        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap().downcast::<Ip>().unwrap();
         assert!(ip_pdu.tos() == 0x3c);
     }
 
     #[test]
     fn test_ip_get_dscp() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap();
-        assert!(ip_pdu.dscp() == 0x3);
+        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap().downcast::<Ip>().unwrap();
+        assert!(ip_pdu.dscp() == 0b0000_1111);
     }
 
     #[test]
     fn test_ip_get_ecn() {
         let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap();
-        assert!(ip_pdu.ecn() == 0xc);
+        let ip_pdu = Ip::from_bytes(ip_bytes).unwrap().downcast::<Ip>().unwrap();
+        assert!(ip_pdu.ecn() == 0b0000_0000);
     }
 }

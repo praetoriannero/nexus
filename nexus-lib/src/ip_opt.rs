@@ -52,16 +52,16 @@ impl<'a> Pdu<'a> for IpOption<'a> {
         res
     }
 
-    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
-        Ok(Self {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
+        Ok(Box::new(Self {
             header: Cow::Borrowed(&bytes),
             data: Cow::Owned(Vec::new()),
             parent: None,
             child: None,
-        })
+        }))
     }
 
-    fn to_json(&self) -> Result<String, serde_json::Error> {
+    fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
         todo!()
     }
 }

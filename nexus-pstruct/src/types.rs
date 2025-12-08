@@ -12,7 +12,7 @@ pub struct BitsField<const S: usize> {}
 
 pub struct PadBits<const S: usize> {}
 
-pub struct Field<T: ToPrimitive> {}
+// pub struct Field<T: ToPrimitive> {}
 
 pub struct Test {
     src: BytesField<4>,

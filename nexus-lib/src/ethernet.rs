@@ -1,53 +1,63 @@
 use crate::error::ParseError;
-use crate::ip::Ip;
 use crate::mac_address::MacAddress;
-use crate::pdu::{Pdu, Pob};
+use crate::pdu::{Pdu, PduBuilder, Pob};
 use crate::raw::Raw;
-use crate::utils::{parse_bytes, printable_ascii};
+use crate::utils::parse_bytes;
 
 use nexus_macros::{Tid, pdu_impl, pdu_type};
 use nexus_tid::Tid;
-use num_enum::TryFromPrimitive;
-use serde::Serialize;
-use serde::ser::SerializeStruct;
 use std::any::TypeId;
 use std::borrow::Cow;
-use std::convert::TryFrom;
+use std::collections::HashMap;
+use std::sync::{LazyLock, RwLock};
 
 const ETH_DST_OFFSET: usize = 0;
 const ETH_SRC_OFFSET: usize = 6;
 const ETH_TYPE_OFFSET: usize = 12;
 const ETH_HEADER_LEN: usize = 14;
 
-#[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
-#[repr(u16)]
-pub enum EtherType {
-    Ipv4 = 0x0800,
-    Arp = 0x0806,
-    Ipv6 = 0x86DD,
-}
-
-fn pdu_from_type<'a>(ether_type: u16, bytes: &'a [u8]) -> Pob<'a> {
-    let Ok(et) = EtherType::try_from(ether_type) else {
-        return Some(Box::new(
-            Raw::from_bytes(bytes).expect("Failed to create Raw PDU type"),
-        ));
-    };
-    match et {
-        EtherType::Ipv4 => Some(Box::new(
-            Ip::from_bytes(bytes).expect("Failed to create IPv4 PDU type"),
-        )),
-        _ => Some(Box::new(
-            Raw::from_bytes(bytes).expect("Failed to create Raw PDU type"),
-        )),
+fn pdu_from_type<'a>(ether_type: EtherType, bytes: &'a [u8]) -> Pob<'a> {
+    let table = ETHER_DISSECTION_TABLE.read().unwrap();
+    if let Some(builder) = table.get(&ether_type) {
+        builder(bytes).ok()
+    } else {
+        Raw::from_bytes(bytes).ok()
     }
 }
 
-fn get_ether_type(bytes: &[u8]) -> u16 {
+#[derive(Hash, Eq, PartialEq)]
+pub struct EtherType(pub u16);
+
+fn get_ether_type<'a>(bytes: &'a [u8]) -> u16 {
     parse_bytes::<u16>(
         &bytes[ETH_TYPE_OFFSET..ETH_HEADER_LEN],
         crate::utils::Endian::Big,
     )
+}
+
+pub static ETHER_DISSECTION_TABLE: LazyLock<RwLock<HashMap<EtherType, PduBuilder>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
+
+#[macro_export]
+macro_rules! register_eth_type {
+    ($eth_type:expr, $builder:ident) => {
+        paste! {
+            #[ctor]
+            fn [<__nexus_register_ether_type_ $builder:lower>]() {
+                pdu_trait_assert::<$builder>();
+                if ETHER_DISSECTION_TABLE
+                    .write()
+                    .unwrap()
+                    .insert($eth_type, |bytes: &'_ [u8]| -> PduResult<'_> {
+                        $builder::from_bytes(bytes)
+                    })
+                    .is_some()
+                {
+                    panic!("Ethernet types can only be added once.")
+                };
+            }
+        }
+    };
 }
 
 #[pdu_type]
@@ -62,24 +72,25 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
         res
     }
 
-    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
         if bytes.len() < ETH_HEADER_LEN {
             return Err(ParseError::NotEnoughData);
         }
 
-        let Some(inner) = pdu_from_type(get_ether_type(bytes), &bytes[ETH_HEADER_LEN..]) else {
+        let Some(inner) = pdu_from_type(EtherType(get_ether_type(bytes)), &bytes[ETH_HEADER_LEN..])
+        else {
             return Err(ParseError::UnsupportedProtocol);
         };
 
-        Ok(Self {
+        Ok(Box::new(Self {
             header: Cow::Borrowed(&bytes[..ETH_HEADER_LEN]),
             data: Cow::Borrowed(&bytes[ETH_HEADER_LEN..]),
             parent: None,
             child: Some(inner),
-        })
+        }))
     }
 
-    fn to_json(&self) -> Result<String, serde_json::Error> {
+    fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
         todo!()
     }
 }
@@ -144,19 +155,5 @@ impl<'a> Ethernet<'a> {
 
     pub fn set_payload(&mut self, payload: &[u8]) {
         self.data.to_mut().copy_from_slice(payload);
-    }
-}
-
-impl Serialize for Ethernet<'_> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut s = serializer.serialize_struct("Ethernet", 4)?;
-        s.serialize_field("eth.dst", &self.dst_addr().to_str())?;
-        s.serialize_field("eth.src", &self.src_addr().to_str())?;
-        s.serialize_field("eth.type", &self.ether_type())?;
-        s.serialize_field("eth.data", &printable_ascii(self.payload()))?;
-        s.end()
     }
 }

@@ -1,14 +1,15 @@
 use crate::error::ParseError;
-use std::any::TypeId;
 
 use nexus_tid::Tid;
+use serde_json::Value;
+use std::any::TypeId;
 
 pub trait Pdu<'a>: Tid<'a> + 'a {
-    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError>
+    fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError>
     where
         Self: Sized;
 
-    fn to_json(&self) -> Result<String, serde_json::error::Error>;
+    fn to_json(&self) -> Result<Value, serde_json::error::Error>;
 
     fn to_bytes(&self) -> Vec<u8>;
 
@@ -41,6 +42,12 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
         Box::new(self)
     }
 }
+
+pub fn pdu_trait_assert<'a, T: Pdu<'a>>() {}
+
+pub type PduBuilder = for<'a> fn(&'a [u8]) -> PduResult<'a>;
+
+pub type PduResult<'a> = Result<Box<dyn Pdu<'a> + 'a>, ParseError>;
 
 pub type Pob<'a> = Option<Box<dyn Pdu<'a> + 'a>>;
 

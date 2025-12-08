@@ -1,10 +1,12 @@
-use std::any::TypeId;
-use std::borrow::Cow;
-
 use crate::error::ParseError;
 use crate::pdu::{Pdu, Pob};
+use crate::utils::printable_ascii;
+
 use nexus_macros::{Tid, pdu_impl, pdu_type};
 use nexus_tid::Tid;
+use serde_json::json;
+use std::any::TypeId;
+use std::borrow::Cow;
 
 #[pdu_type]
 pub struct Raw<'a> {}
@@ -17,16 +19,18 @@ impl<'a> Pdu<'a> for Raw<'a> {
         res
     }
 
-    fn from_bytes(bytes: &'a [u8]) -> Result<Self, ParseError> {
-        Ok(Self {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
+        Ok(Box::new(Self {
             data: Cow::Borrowed(&bytes),
             header: Cow::Owned(Vec::new()),
             parent: None,
             child: None,
-        })
+        }))
     }
 
-    fn to_json(&self) -> Result<String, serde_json::Error> {
-        todo!()
+    fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
+        Ok(json!({
+            "data": printable_ascii(&self.data)
+        }))
     }
 }
