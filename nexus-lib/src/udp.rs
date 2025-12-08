@@ -2,7 +2,7 @@ use crate::ip::{IPV4_DISSECTION_TABLE, Ipv4Type};
 use crate::prelude::*;
 use crate::register_ipv4_type;
 
-pub const UDP_HEADER_LEN: usize = 8;
+const UDP_HEADER_LEN: usize = 8;
 const UDP_SPORT_OFFSET: usize = 0;
 const UDP_DPORT_OFFSET: usize = 2;
 const UDP_LENGTH_OFFSET: usize = 4;

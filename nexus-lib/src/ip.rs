@@ -6,7 +6,7 @@ use crate::utils::{Endian, parse_bytes};
 
 use std::net::Ipv4Addr;
 
-pub const IPV4_BYTE_MULTIPLE: usize = 4;
+const IPV4_BYTE_MULTIPLE: usize = 4;
 const IPV4_VERSION_OFFSET: usize = 0;
 const IPV4_TOS_OFFSET: usize = 1;
 const IPV4_TOTAL_LEN_OFFSET: usize = 2;
