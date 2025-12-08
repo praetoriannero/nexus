@@ -363,7 +363,10 @@ impl<'a> Ip<'a> {
     }
 }
 
-pub static IPV4_DISSECTION_TABLE: LazyLock<RwLock<HashMap<EtherType, PduBuilder>>> =
+#[derive(Hash, Eq, PartialEq)]
+pub struct Ipv4Type(pub u8);
+
+pub static IPV4_DISSECTION_TABLE: LazyLock<RwLock<HashMap<Ipv4Type, PduBuilder>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
 #[macro_export]
@@ -371,7 +374,7 @@ macro_rules! register_ipv4_type {
     ($ip_type:expr, $builder:ident) => {
         paste! {
             #[ctor]
-            fn [<__nexus_register_ether_type_ $builder:lower>]() {
+            fn [<__nexus_register_ipv4_type_ $builder:lower>]() {
                 pdu_trait_assert::<$builder>();
                 if IPV4_DISSECTION_TABLE
                     .write()
