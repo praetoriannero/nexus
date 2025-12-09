@@ -505,4 +505,56 @@ mod tests {
         ip_pdu.set_ecn(2);
         assert!(ip_pdu.ecn() == 2);
     }
+
+    #[test]
+    fn test_get_src_addr() {
+        let ip_pdu = test_ip_pdu();
+        assert!(ip_pdu.src_addr() == std::net::Ipv4Addr::from_bits(0xC0_00_02_01));
+    }
+
+    #[test]
+    fn test_set_src_addr() {
+        let mut ip_pdu = test_ip_pdu();
+        ip_pdu.set_src_addr(std::net::Ipv4Addr::from_bits(0x00_11_44_55));
+        assert!(ip_pdu.src_addr() == std::net::Ipv4Addr::from_bits(0x00_11_44_55));
+    }
+
+    #[test]
+    fn test_get_dst_addr() {
+        let ip_pdu = test_ip_pdu();
+        assert!(ip_pdu.dst_addr() == std::net::Ipv4Addr::from_bits(0xC6_33_64_02));
+    }
+
+    #[test]
+    fn test_set_dst_addr() {
+        let mut ip_pdu = test_ip_pdu();
+        ip_pdu.set_dst_addr(std::net::Ipv4Addr::from_bits(0x00_11_44_55));
+        assert!(ip_pdu.dst_addr() == std::net::Ipv4Addr::from_bits(0x00_11_44_55));
+    }
+
+    #[test]
+    fn test_get_payload() {
+        let payload = [
+            0x30, 0x39, // Src port = 12345
+            0x00, 0x50, // Dst port = 80
+            0x01, 0x02, 0x03, 0x04, // Seq number
+            0x00, 0x00, 0x00, 0x00, // Ack number
+            0x50, 0x18, // Data offset (5) << 4 , Flags (PSH+ACK)
+            0xFF, 0xFF, // Window size
+            0x00, 0x00, // Checksum (left 0x0000 for test)
+            0x00, 0x00, // Urgent pointer
+            // Payload: "hello"
+            0x68, 0x65, 0x6C, 0x6C, 0x6F,
+        ];
+        let ip_pdu = test_ip_pdu();
+        assert!(ip_pdu.payload() == payload);
+    }
+
+    #[test]
+    fn test_set_payload() {
+        let payload = vec![0x00; 25];
+        let mut ip_pdu = test_ip_pdu();
+        ip_pdu.set_payload(&payload);
+        assert!(ip_pdu.payload() == payload);
+    }
 }
