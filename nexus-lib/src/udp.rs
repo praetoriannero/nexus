@@ -1,6 +1,7 @@
 use crate::ip::{IPV4_DISSECTION_TABLE, Ipv4Type};
+use crate::ip6::{IPV6_DISSECTION_TABLE, Ipv6Type};
 use crate::prelude::*;
-use crate::register_ipv4_type;
+use crate::{register_ipv4_type, register_ipv6_type};
 
 const UDP_HEADER_LEN: usize = 8;
 const UDP_SPORT_OFFSET: usize = 0;
@@ -119,6 +120,7 @@ impl<'a> Udp<'a> {
 }
 
 register_ipv4_type!(Ipv4Type(0x11), Udp);
+register_ipv6_type!(Ipv6Type(0x11), Udp);
 
 pub struct UdpType(pub u16);
 

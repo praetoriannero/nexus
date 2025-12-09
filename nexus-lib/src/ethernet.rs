@@ -86,7 +86,7 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
                 "eth.src_addr": self.src_addr().to_string(),
                 "eth.dst_addr": self.dst_addr().to_string(),
                 "eth.type": self.ether_type(),
-                "eth.data": self.child_pdu().as_ref().unwrap().to_json().unwrap(),
+                "eth.data": self.child_to_json(),
             }
         }))
     }

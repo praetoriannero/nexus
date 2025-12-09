@@ -14,12 +14,36 @@ pub struct Packet<'a> {
 }
 
 impl<'a> Packet<'a> {
-    pub fn serialize(&mut self) -> Vec<u8> {
+    pub fn new(pdu_chain: Vec<Box<dyn Pdu<'a>>>) -> Self {
+        Self {
+            pdu_chain: pdu_chain,
+        }
+    }
+
+    pub fn to_bytes(&mut self) -> Vec<u8> {
         let mut packet = Vec::new();
         for idx in 0..self.pdu_chain.len() {
             packet.extend_from_slice(&self.pdu_chain[idx].to_bytes());
         }
         packet
+    }
+
+    pub fn find<T: Pdu<'a>>(&self) -> Option<&'a T> {
+        for pdu in &self.pdu_chain {
+            if pdu.self_id() == T::id() {
+                return unsafe { Some(&*(&pdu as *const _ as *const T)) };
+            }
+        }
+        None
+    }
+
+    pub fn find_mut<T: Pdu<'a>>(&mut self) -> Option<&'a mut T> {
+        for pdu in &mut self.pdu_chain {
+            if pdu.self_id() == T::id() {
+                return unsafe { Some(&mut *(pdu as *mut _ as *mut T)) };
+            }
+        }
+        None
     }
 }
 
@@ -32,7 +56,7 @@ mod tests {
     #[test]
     fn test_pdu() {
         let packet = packet!(Ethernet::new(), Ip::new());
-        for pdu in packet.pdu_chain {
+        for _pdu in packet.pdu_chain {
             // println!("{:?}", pdu);
         }
         // let boxed_pdu = Box::new(Ethernet::new());

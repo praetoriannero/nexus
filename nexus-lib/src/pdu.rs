@@ -2,6 +2,7 @@ use crate::error::ParseError;
 
 use nexus_tid::Tid;
 use serde_json::Value;
+use serde_json::json;
 use std::any::TypeId;
 
 pub trait Pdu<'a>: Tid<'a> + 'a {
@@ -20,6 +21,14 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
     fn child_pdu_mut(&mut self) -> &mut Pob<'a>;
 
     fn child_pdu(&self) -> &Pob<'a>;
+
+    fn child_to_json(&self) -> serde_json::Value {
+        if let Some(child) = self.child_pdu().as_ref() {
+            child.to_json().unwrap()
+        } else {
+            json!("")
+        }
+    }
 
     fn pdu_chain(&mut self, chain: &mut Vec<TypeId>) {
         chain.push(self.self_id());

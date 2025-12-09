@@ -35,6 +35,7 @@ impl<'a> Pdu<'a> for Ipv6<'a> {
 
 register_eth_type!(EtherType(0x86DD), Ipv6);
 
+#[derive(Hash, Eq, PartialEq)]
 pub struct Ipv6Type(pub u8);
 
 pub static IPV6_DISSECTION_TABLE: LazyLock<RwLock<HashMap<Ipv6Type, PduBuilder>>> =

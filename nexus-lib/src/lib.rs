@@ -9,6 +9,7 @@ pub mod packet;
 pub mod pdu;
 pub mod prelude;
 pub mod raw;
+pub mod table;
 pub mod tcp;
 pub mod udp;
 pub mod utils;

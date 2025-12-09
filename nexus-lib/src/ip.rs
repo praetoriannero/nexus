@@ -85,7 +85,7 @@ impl<'a> Pdu<'a> for Ip<'a> {
     fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
         Ok(json!({
             "ip": {
-                "ip.data": self.child_pdu().as_ref().unwrap().to_json().unwrap(),
+                "ip.data": self.child_to_json(),
             }
         }))
     }
@@ -107,9 +107,8 @@ impl<'a> Ip<'a> {
     }
 
     pub fn set_version(&mut self, version: u8) {
-        let version_byte = &mut self.header.to_mut()[IPV4_VERSION_OFFSET];
-        (*version_byte) &= 0x0F;
-        (*version_byte) &= version << 4;
+        let version_ref = &mut self.header.to_mut()[IPV4_VERSION_OFFSET];
+        *version_ref = (*version_ref & 0x0F) | (version << 4);
     }
 
     pub fn with_version(&mut self, version: u8) -> &mut Self {
@@ -117,16 +116,13 @@ impl<'a> Ip<'a> {
         self
     }
 
-    pub fn ihl(&self) -> u16 {
-        let ihl = (self.header[IPV4_VERSION_OFFSET] & 0x0F) as usize * IPV4_BYTE_MULTIPLE;
-        assert!(ihl >= IPV4_HEADER_LEN);
-        ihl as u16
+    pub fn ihl(&self) -> u8 {
+        self.header[IPV4_VERSION_OFFSET] & 0x0F
     }
 
     pub fn set_ihl(&mut self, ihl: u8) {
-        let ihl_byte = &mut self.header.to_mut()[IPV4_VERSION_OFFSET];
-        *ihl_byte &= 0xF0;
-        *ihl_byte &= ihl;
+        let ihl_ref = &mut self.header.to_mut()[IPV4_VERSION_OFFSET];
+        *ihl_ref = (*ihl_ref & 0xF0) | ihl;
     }
 
     pub fn with_ihl(&mut self, ihl: u8) -> &mut Self {
@@ -152,9 +148,8 @@ impl<'a> Ip<'a> {
     }
 
     pub fn set_dscp(&mut self, dscp: u8) {
-        let tos = &mut self.header.to_mut()[IPV4_TOS_OFFSET];
-        *tos &= 0x0000_0011;
-        *tos &= dscp;
+        let tos_ref = &mut self.header.to_mut()[IPV4_TOS_OFFSET];
+        *tos_ref = (*tos_ref & 0b0000_0011) | (dscp << 2);
     }
 
     pub fn with_dscp(&mut self, dscp: u8) -> &mut Self {
@@ -167,9 +162,8 @@ impl<'a> Ip<'a> {
     }
 
     pub fn set_ecn(&mut self, ecn: u8) {
-        let tos = &mut self.header.to_mut()[IPV4_TOS_OFFSET];
-        *tos &= 0b1111_1100;
-        *tos &= ecn;
+        let tos_ref = &mut self.header.to_mut()[IPV4_TOS_OFFSET];
+        *tos_ref = (*tos_ref & 0b1111_1100) | ecn;
     }
 
     pub fn with_ecn(&mut self, ecn: u8) -> &mut Self {
@@ -438,43 +432,77 @@ mod tests {
         0x68, 0x65, 0x6C, 0x6C, 0x6F,
     ];
 
+    fn test_ip_pdu<'a>() -> Ip<'a> {
+        deserialize::<Ip>(&IPV4_TCP_HELLO).unwrap()
+    }
+
     #[test]
-    fn test_ip_from_bytes() {
+    fn test_from_bytes() {
         Ip::from_bytes(&IPV4_TCP_HELLO).unwrap();
     }
 
     #[test]
-    fn test_ip_get_version() {
-        let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = deserialize::<Ip>(ip_bytes).unwrap();
+    fn test_get_version() {
+        let ip_pdu = test_ip_pdu();
         assert!(ip_pdu.version() == 4);
     }
 
     #[test]
-    fn test_ip_get_ihl() {
-        let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = deserialize::<Ip>(ip_bytes).unwrap();
-        assert!(IPV4_HEADER_LEN == ip_pdu.ihl() as usize);
+    fn test_set_version() {
+        let mut ip_pdu = test_ip_pdu();
+        ip_pdu.set_version(3);
+        assert!(ip_pdu.version() == 3);
     }
 
     #[test]
-    fn test_ip_get_tos() {
-        let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = deserialize::<Ip>(ip_bytes).unwrap();
+    fn test_get_ihl() {
+        let ip_pdu = test_ip_pdu();
+        assert!(ip_pdu.ihl() == 5);
+    }
+
+    #[test]
+    fn test_set_ihl() {
+        let mut ip_pdu = test_ip_pdu();
+        ip_pdu.set_ihl(3);
+        assert!(ip_pdu.ihl() == 3);
+    }
+
+    #[test]
+    fn test_get_tos() {
+        let ip_pdu = test_ip_pdu();
         assert!(ip_pdu.tos() == 0x3c);
     }
 
     #[test]
-    fn test_ip_get_dscp() {
-        let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = deserialize::<Ip>(ip_bytes).unwrap();
+    fn test_set_tos() {
+        let mut ip_pdu = test_ip_pdu();
+        ip_pdu.set_tos(0xFF);
+        assert!(ip_pdu.tos() == 0xFF);
+    }
+
+    #[test]
+    fn test_get_dscp() {
+        let ip_pdu = test_ip_pdu();
         assert!(ip_pdu.dscp() == 0b0000_1111);
     }
 
     #[test]
-    fn test_ip_get_ecn() {
-        let ip_bytes = &IPV4_TCP_HELLO;
-        let ip_pdu = deserialize::<Ip>(ip_bytes).unwrap();
+    fn test_set_dscp() {
+        let mut ip_pdu = test_ip_pdu();
+        ip_pdu.set_dscp(0b101010);
+        assert!(ip_pdu.dscp() == 0b101010);
+    }
+
+    #[test]
+    fn test_get_ecn() {
+        let ip_pdu = test_ip_pdu();
         assert!(ip_pdu.ecn() == 0b0000_0000);
+    }
+
+    #[test]
+    fn test_set_ecn() {
+        let mut ip_pdu = test_ip_pdu();
+        ip_pdu.set_ecn(2);
+        assert!(ip_pdu.ecn() == 2);
     }
 }
