@@ -6,7 +6,7 @@ use serde_json::json;
 use std::any::TypeId;
 
 pub trait Pdu<'a>: Tid<'a> + 'a {
-    fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError>
+    fn from_bytes(bytes: &'a [u8]) -> PduResult<'a>
     where
         Self: Sized;
 

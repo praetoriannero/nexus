@@ -1,19 +1,11 @@
 use crate::mac_address::MacAddress;
 use crate::prelude::*;
+use crate::table::{DissectionTable, build_from_table, create_table};
 
 const ETH_DST_OFFSET: usize = 0;
 const ETH_SRC_OFFSET: usize = 6;
 const ETH_TYPE_OFFSET: usize = 12;
 const ETH_HEADER_LEN: usize = 14;
-
-fn pdu_from_type<'a>(ether_type: EtherType, bytes: &'a [u8]) -> Pob<'a> {
-    let table = ETHER_DISSECTION_TABLE.read().unwrap();
-    if let Some(builder) = table.get(&ether_type) {
-        builder(bytes).ok()
-    } else {
-        Raw::from_bytes(bytes).ok()
-    }
-}
 
 #[derive(Hash, Eq, PartialEq)]
 pub struct EtherType(pub u16);
@@ -25,30 +17,7 @@ fn get_ether_type<'a>(bytes: &'a [u8]) -> u16 {
     )
 }
 
-pub static ETHER_DISSECTION_TABLE: LazyLock<RwLock<HashMap<EtherType, PduBuilder>>> =
-    LazyLock::new(|| RwLock::new(HashMap::new()));
-
-#[macro_export]
-macro_rules! register_eth_type {
-    ($eth_type:expr, $builder:ident) => {
-        paste! {
-            #[ctor]
-            fn [<__nexus_register_ether_type_ $builder:lower>]() {
-                pdu_trait_assert::<$builder>();
-                if ETHER_DISSECTION_TABLE
-                    .write()
-                    .unwrap()
-                    .insert($eth_type, |bytes: &'_ [u8]| -> PduResult<'_> {
-                        $builder::from_bytes(bytes)
-                    })
-                    .is_some()
-                {
-                    panic!("Ethernet types can only be added once.")
-                };
-            }
-        }
-    };
-}
+pub static ETHER_DISSECTION_TABLE: DissectionTable<EtherType> = create_table();
 
 #[pdu_type]
 pub struct Ethernet<'a> {}
@@ -67,8 +36,11 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
             return Err(ParseError::NotEnoughData);
         }
 
-        let Some(inner) = pdu_from_type(EtherType(get_ether_type(bytes)), &bytes[ETH_HEADER_LEN..])
-        else {
+        let Some(inner) = build_from_table(
+            &ETHER_DISSECTION_TABLE,
+            EtherType(get_ether_type(bytes)),
+            &bytes[ETH_HEADER_LEN..],
+        ) else {
             return Err(ParseError::UnsupportedProtocol);
         };
 

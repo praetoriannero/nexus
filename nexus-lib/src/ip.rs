@@ -1,7 +1,7 @@
 use crate::ethernet::{ETHER_DISSECTION_TABLE, EtherType};
 use crate::ip_opt::IpOption;
 use crate::prelude::*;
-use crate::register_eth_type;
+use crate::register_pdu;
 use crate::utils::{Endian, parse_bytes};
 
 use std::net::Ipv4Addr;
@@ -400,7 +400,8 @@ macro_rules! register_ipv4_type {
     };
 }
 
-register_eth_type!(EtherType(0x0800), Ip);
+register_pdu!(EtherType(0x0800), Ip, ETHER_DISSECTION_TABLE);
+// register_eth_type!(EtherType(0x0800), Ip);
 
 #[cfg(test)]
 mod tests {

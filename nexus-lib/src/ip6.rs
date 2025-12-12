@@ -1,5 +1,5 @@
 use crate::ethernet::{ETHER_DISSECTION_TABLE, EtherType};
-use crate::{prelude::*, register_eth_type};
+use crate::{prelude::*, register_pdu};
 
 const IPV6_HEADER_LEN: usize = 40;
 
@@ -33,7 +33,7 @@ impl<'a> Pdu<'a> for Ipv6<'a> {
     }
 }
 
-register_eth_type!(EtherType(0x86DD), Ipv6);
+register_pdu!(EtherType(0x86DD), Ipv6, ETHER_DISSECTION_TABLE);
 
 #[derive(Hash, Eq, PartialEq)]
 pub struct Ipv6Type(pub u8);

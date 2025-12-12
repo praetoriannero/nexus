@@ -21,38 +21,37 @@ fn main() {
             printable_ascii(packet.data)
         );
 
-        let Ok(eth_pdu) = Ethernet::from_bytes(&packet.data) else {
+        let Ok(mut eth_pdu) = Ethernet::from_bytes(&packet.data) else {
             continue;
         };
 
-        //
-        // if let Some(mut eth_pdu3) = deserialize::<Ethernet>(&packet.data) {
-        //     println!("Old3 ether type {}", eth_pdu3.ether_type());
-        //     eth_pdu3.set_ether_type(1);
-        //     println!("New3 ether type {}", eth_pdu3.ether_type());
-        // }
-        //
-        // if let Some(eth_pdu2) = eth_pdu.find_mut::<Ethernet>() {
-        //     println!("Old2 ether type {}", eth_pdu2.ether_type());
-        //     eth_pdu2.set_ether_type(1);
-        //     println!("New2 ether type {}", eth_pdu2.ether_type());
-        // }
+        if let Some(mut eth_pdu3) = deserialize::<Ethernet>(&packet.data) {
+            println!("Old3 ether type {}", eth_pdu3.ether_type());
+            eth_pdu3.set_ether_type(1);
+            println!("New3 ether type {}", eth_pdu3.ether_type());
+        }
+
+        if let Some(eth_pdu2) = eth_pdu.find_mut::<Ethernet>() {
+            println!("Old2 ether type {}", eth_pdu2.ether_type());
+            eth_pdu2.set_ether_type(1);
+            println!("New2 ether type {}", eth_pdu2.ether_type());
+        }
 
         println!(
             "{}",
             serde_json::to_string_pretty(&eth_pdu.to_json().unwrap()).unwrap()
         );
-        //
-        // if let Some(ip_pdu) = eth_pdu.find::<Ip>() {
-        //     println!("{}", ip_pdu.src_addr());
-        // } else {
-        //     continue;
-        // };
-        // let Some(inner) = eth_pdu.child_pdu_mut() else {
-        //     continue;
-        // };
-        //
-        // let ip_pdu = inner.downcast_mut::<Ip>().unwrap();
-        // println!("{}", ip_pdu.src_addr());
+
+        if let Some(ip_pdu) = eth_pdu.find::<Ip>() {
+            println!("{}", ip_pdu.src_addr());
+        } else {
+            continue;
+        };
+        let Some(inner) = eth_pdu.child_pdu_mut() else {
+            continue;
+        };
+
+        let ip_pdu = inner.downcast_mut::<Ip>().unwrap();
+        println!("{}", ip_pdu.src_addr());
     }
 }
