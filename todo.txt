@@ -1,5 +1,60 @@
-Dissector Tables
+# core
+
+## dissector tables:
 - should be able to add and remove entries
 - - allows reconfiguring dissection process as the user would like
 - could be a type alias or their own type
+- update: kind've done?
 
+## pstruct
+- "protocol struct"
+- idea is that one can generalize all parts of protocol definitions
+- mark fields as appropriate like
+`
+#[derive(Protocol)]
+pub struct MyProto<'a> {
+    #[field(formatter=format_ip_addr)]
+    pub src_addr: BytesField<4>,
+    #[field(formatter=format_ip_addr)]
+    pub dst_addr: BytesField<4>,
+}
+`
+pstruct should add <field>, set_<field>, and with_<field> functions for each
+protocol field marked #[field(...)]
+
+pstruct fields should also have left-handed alignment by default, but could also have something
+like #[field(align=(u32, "right"))] so that the field aligns to the nearest u32 index on the right.
+
+padding should be supported.
+
+fields should be optional, such that they are activated based on a callback:
+    #[field(activate=has_options)]
+    pub ipv4_options: RepeatedField<
+
+
+# protocols:
+## ipv4:
+- Ipv4 options parsing
+- rename from "ip" to "ipv4"
+
+## ipv6:
+- Finish parsing fields
+- Need to add options for this (if it has them)
+
+## tcp:
+- Need to parse options on this one, too.
+
+## arp:
+- General support
+
+## dns:
+- super common. should support this.
+
+## ssh:
+- 
+
+## ftp:
+-
+
+## dhcp
+-

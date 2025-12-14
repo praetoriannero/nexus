@@ -1,4 +1,8 @@
-use crate::prelude::*;
+use crate::{prelude::*, register_pdu};
+
+const ECHO_REPLY_ID_OFFSET: usize = 0;
+const ECHO_REPLY_SEQNUM_OFFSET: usize = 2;
+const ECHO_REPLY_DATA_OFFSET: usize = 4;
 
 #[pdu_type]
 pub struct EchoReply<'a> {}
@@ -12,33 +16,96 @@ impl<'a> EchoReply<'a> {
             child: None,
         }
     }
+
+    pub fn id(&self) -> u16 {
+        parse_bytes::<u16>(
+            &self.header[ECHO_REPLY_ID_OFFSET..ECHO_REPLY_SEQNUM_OFFSET],
+            Endian::Big,
+        )
+    }
+
+    pub fn set_id(&mut self, id: u16) {
+        self.header.to_mut()[ECHO_REPLY_ID_OFFSET..ECHO_REPLY_SEQNUM_OFFSET]
+            .copy_from_slice(&id.to_be_bytes());
+    }
+
+    pub fn with_id(&mut self, id: u16) -> &mut Self {
+        self.set_id(id);
+        self
+    }
+
+    pub fn seq_number(&self) -> u16 {
+        parse_bytes::<u16>(
+            &self.header[ECHO_REPLY_SEQNUM_OFFSET..ECHO_REPLY_DATA_OFFSET],
+            Endian::Big,
+        )
+    }
+
+    pub fn set_seq_number(&mut self, seq_number: u16) {
+        self.header.to_mut()[ECHO_REPLY_SEQNUM_OFFSET..ECHO_REPLY_DATA_OFFSET]
+            .copy_from_slice(&seq_number.to_be_bytes());
+    }
+
+    pub fn with_seq_number(&mut self, seq_number: u16) -> &mut Self {
+        self.set_seq_number(seq_number);
+        self
+    }
+
+    pub fn data(&self) -> &[u8] {
+        &self.header[ECHO_REPLY_DATA_OFFSET..]
+    }
+
+    pub fn set_data(&mut self, data: &[u8]) {
+        self.data = Cow::Owned(data.to_vec());
+    }
+
+    pub fn with_data(&mut self, data: &[u8]) -> &mut Self {
+        self.set_data(data);
+        self
+    }
 }
 
 #[pdu_impl]
 impl<'a> Pdu<'a> for EchoReply<'a> {
-    fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError>
-    where
-        Self: Sized,
-    {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
         Ok(Box::new(Self {
-            header: Cow::Owned(Vec::new()),
-            data: Cow::Borrowed(&bytes),
+            header: Cow::Borrowed(&bytes[..ECHO_REPLY_DATA_OFFSET]),
+            data: Cow::Borrowed(&bytes[ECHO_REPLY_DATA_OFFSET..]),
             parent: None,
             child: None,
         }))
     }
 
     fn to_bytes(&self) -> Vec<u8> {
-        todo!()
+        let mut res = Vec::new();
+        res.extend_from_slice(&self.header);
+        res.extend_from_slice(&self.data);
+        res
     }
 
     fn to_json(&self) -> Result<serde_json::Value, serde_json::error::Error> {
-        todo!()
+        Ok(json!({
+            "echo_reply": {
+                "echo_reply.id": self.id(),
+                "echo_reply.seq_number": self.seq_number(),
+                "echo_reply.data": printable_ascii(&self.data)
+            }
+        }))
     }
 }
 
+register_pdu!(IcmpType(0), EchoReply, ICMP_DISSECTION_TABLE);
+
 #[pdu_type]
 pub struct DestUnreachable<'a> {}
+
+// impl<'a> DestUnreachable<'a> {
+//     pub fn new() {
+//         Self {
+//             header: Cow::Owned(),
+//         }
+//     }
+// }
 
 #[pdu_type]
 pub struct RedirectMessage<'a> {}
@@ -65,51 +132,52 @@ pub struct Timestamp<'a> {}
 pub struct TimestampReply<'a> {}
 
 #[pdu_type]
-pub struct InfoRequest<'a> {}
-
-#[pdu_type]
-pub struct InfoReply<'a> {}
-
-#[pdu_type]
-pub struct AddrMaskRequest<'a> {}
-
-#[pdu_type]
-pub struct AddrMaskReply<'a> {}
-
-#[pdu_type]
-pub struct Traceroute<'a> {}
-
-#[pdu_type]
 pub struct ExtEchoRequest<'a> {}
 
 #[pdu_type]
 pub struct ExtEchoReply<'a> {}
 
-pub enum ControlMessage<'a> {
-    EchoReply(EchoReply<'a>),
-    EchoRequest(EchoRequest<'a>),
-    DestUnreachable(DestUnreachable<'a>),
-    RedirectMessage(RedirectMessage<'a>),
-    RouterAdvertisement(RouterAdvertisement<'a>),
-    RouterSolicitation(RouterSolicitation<'a>),
-    TimeExceeded(TimeExceeded<'a>),
-    ParameterProblem(ParameterProblem<'a>),
-    Timestamp(Timestamp<'a>),
-    TimestampReply(TimestampReply<'a>),
-    InfoRequest(InfoRequest<'a>),
-    InfoReply(InfoReply<'a>),
-    AddrMaskRequest(AddrMaskRequest<'a>),
-    AddrMaskReply(AddrMaskReply<'a>),
-    Traceroute(Traceroute<'a>),
-    ExtEchoRequest(ExtEchoRequest<'a>),
-    ExtEchoReply(ExtEchoReply<'a>),
+#[derive(Hash, Eq, PartialEq)]
+pub struct IcmpType(pub u8);
+
+pub static ICMP_DISSECTION_TABLE: DissectionTable<IcmpType> = create_table();
+
+// register_pdu!(IcmpType(3), DestUnreachable, ICMP_DISSECTION_TABLE);
+// register_pdu!(IcmpType(5), RedirectMessage, ICMP_DISSECTION_TABLE);
+
+pub enum ControlMessage {
+    EchoReply = 0,
+    EchoRequest = 8,
+    DestUnreachable = 3,
+    RedirectMessage = 5,
+    RouterAdvertisement = 9,
+    RouterSolicitation = 10,
+    TimeExceeded = 11,
+    ParameterProblem = 12,
+    Timestamp = 13,
+    TimestampReply = 14,
+    ExtEchoRequest = 42,
+    ExtEchoReply = 43,
+    Undefined,
 }
 
 const ICMP_MIN_SIZE: usize = 4;
 
 #[pdu_type]
 pub struct Icmp<'a> {
-    msg: ControlMessage<'a>,
+    pub msg_type: ControlMessage,
+    pub msg_body: Pob<'a>,
+    header_len: usize,
+}
+
+impl<'a> Icmp<'a> {
+    pub fn msg_type(&self) -> u8 {
+        0
+    }
+
+    pub fn msg_code(&self) -> u8 {
+        0
+    }
 }
 
 #[pdu_impl]
@@ -122,10 +190,13 @@ impl<'a> Pdu<'a> for Icmp<'a> {
     }
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
+        // TODO: parse message type
         Ok(Box::new(Self {
             header: Cow::Borrowed(&bytes[..ICMP_MIN_SIZE]),
             data: Cow::Borrowed(&bytes[ICMP_MIN_SIZE..]),
-            msg: ControlMessage::EchoReply(EchoReply::new()),
+            msg_type: ControlMessage::Undefined,
+            msg_body: None,
+            header_len: ICMP_MIN_SIZE,
             parent: None,
             child: None,
         }))
@@ -133,8 +204,8 @@ impl<'a> Pdu<'a> for Icmp<'a> {
 
     fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
         Ok(json!({
-            "ipv6": {
-                "ipv6.data": printable_ascii(&self.data)
+            "icmp": {
+                "icmp.data": printable_ascii(&self.data)
             }
         }))
     }

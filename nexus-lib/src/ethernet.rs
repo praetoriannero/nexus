@@ -46,7 +46,7 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
 
         Ok(Box::new(Self {
             header: Cow::Borrowed(&bytes[..ETH_HEADER_LEN]),
-            data: Cow::Borrowed(&bytes[ETH_HEADER_LEN..]),
+            data: Cow::Owned(Vec::new()),
             parent: None,
             child: Some(inner),
         }))

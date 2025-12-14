@@ -24,7 +24,10 @@ pub fn build_from_table<'a, T>(
 where
     T: Hash + Eq + PartialEq,
 {
-    let table = dissect_table.read().unwrap();
+    let Ok(table) = dissect_table.read() else {
+        panic!("Failed to secure dissection table.")
+    };
+
     if let Some(builder) = table.get(&value) {
         builder(bytes).ok()
     } else {
@@ -37,9 +40,11 @@ where
     T: Hash + Eq + PartialEq,
 {
     fn add<U: for<'a> Pdu<'a>>(&self, value: T) {
-        if self
-            .write()
-            .unwrap()
+        let Ok(mut table) = self.write() else {
+            panic!("Failed to secure dissection table.")
+        };
+
+        if table
             .insert(value, |bytes: &'_ [u8]| -> PduResult<'_> {
                 U::from_bytes(bytes)
             })
@@ -50,7 +55,11 @@ where
     }
 
     fn remove(&self, value: T) {
-        self.write().unwrap().remove(&value);
+        let Ok(mut table) = self.write() else {
+            panic!("Failed to secure dissection table.")
+        };
+
+        table.remove(&value);
     }
 }
 
@@ -61,9 +70,11 @@ macro_rules! register_pdu {
             #[ctor]
             fn [<__nexus_register_ $table:lower _ $builder:lower>]() {
                 pdu_trait_assert::<$builder>();
-                if $table
-                    .write()
-                    .unwrap()
+                let Ok(mut d_table) = $table.write() else {
+                    panic!("Failed to secure dissection table.")
+                };
+
+                if d_table
                     .insert($value_type, |bytes: &'_ [u8]| -> PduResult<'_> {
                         $builder::from_bytes(bytes)
                     })
