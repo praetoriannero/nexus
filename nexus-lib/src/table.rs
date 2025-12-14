@@ -93,7 +93,7 @@ mod tests {
     #[test]
     fn test_dissection_table_create() {
         use crate::raw::Raw;
-        const TEST_TABLE: DissectionTable<u8> = create_table();
+        static TEST_TABLE: DissectionTable<u8> = create_table();
         register_pdu!(0, Raw, TEST_TABLE);
     }
 }
