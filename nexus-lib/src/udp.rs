@@ -21,6 +21,8 @@ impl<'a> Pdu<'a> for Udp<'a> {
         res
     }
 
+    default_to_owned!(Udp);
+
     fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
         // TODO: add dissection table logic
         Ok(Box::new(Self {

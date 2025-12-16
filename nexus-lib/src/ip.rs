@@ -1,5 +1,6 @@
 use crate::ethernet::{ETHER_DISSECTION_TABLE, EtherType};
 use crate::ip_opt::IpOption;
+use crate::pdu::PobOwned;
 use crate::prelude::*;
 use crate::register_pdu;
 use crate::utils::{Endian, parse_bytes};
@@ -46,6 +47,16 @@ fn pdu_from_type<'a>(ether_type: Ipv4Type, bytes: &'a [u8]) -> Pob<'a> {
 
 #[pdu_impl]
 impl<'a> Pdu<'a> for Ip<'a> {
+    fn to_owned(&self) -> Box<dyn Pdu<'static>> {
+        Box::new(Ip {
+            header: Cow::Owned(self.header.to_vec()),
+            data: Cow::Owned(self.data.to_vec()),
+            opts: Vec::new(),
+            parent: None,
+            child: None,
+        })
+    }
+
     fn to_bytes(&self) -> Vec<u8> {
         let mut res = vec![0; IPV4_HEADER_LEN as usize];
         for idx in 0..self.opts.len() {
@@ -73,8 +84,8 @@ impl<'a> Pdu<'a> for Ip<'a> {
 
         let result = Self {
             opts: Vec::new(),
-            data: Cow::Borrowed(&bytes[header_len..]),
-            header: Cow::Owned(Vec::new()),
+            header: Cow::Borrowed(&bytes[..header_len]),
+            data: Cow::Owned(Vec::new()),
             child: Some(inner),
             parent: None,
         };
@@ -357,19 +368,6 @@ impl<'a> Ip<'a> {
         self.set_dst_addr(dst_addr);
         self
     }
-
-    // pub fn payload(&self) -> &[u8] {
-    //     &self.data
-    // }
-
-    // pub fn set_payload(&mut self, payload: &[u8]) {
-    //     self.data.to_mut().copy_from_slice(payload);
-    // }
-
-    // pub fn with_payload(&mut self, payload: &[u8]) -> &mut Self {
-    //     self.set_payload(payload);
-    //     self
-    // }
 }
 
 #[derive(Hash, Eq, PartialEq)]

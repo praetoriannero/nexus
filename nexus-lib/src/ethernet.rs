@@ -1,4 +1,5 @@
 use crate::mac_address::MacAddress;
+use crate::pdu::PobOwned;
 use crate::prelude::*;
 use crate::table::{DissectionTable, build_from_table, create_table};
 
@@ -29,6 +30,15 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
         res.extend_from_slice(&self.header);
         res.extend_from_slice(&self.data);
         res
+    }
+
+    fn to_owned(&self) -> Box<dyn Pdu<'static>> {
+        Box::new(Ethernet {
+            header: Cow::Owned(self.header.to_vec()),
+            data: Cow::Owned(self.data.to_vec()),
+            parent: None,
+            child: None,
+        })
     }
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {

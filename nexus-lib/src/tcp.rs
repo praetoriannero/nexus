@@ -30,9 +30,11 @@ impl<'a> Pdu<'a> for Tcp<'a> {
         res
     }
 
+    default_to_owned!(Tcp);
+
     fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
         let header_size = get_data_offset(bytes);
-        println!("tcp deserialize attempt {} {}", header_size, bytes.len());
+        // println!("tcp deserialize attempt {} {}", header_size, bytes.len());
         if header_size > bytes.len() {
             return Err(ParseError::NotEnoughData);
         }

@@ -11,6 +11,8 @@ impl<'a> Pdu<'a> for Raw<'a> {
         res
     }
 
+    default_to_owned!(Raw);
+
     fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
         Ok(Box::new(Self {
             data: Cow::Borrowed(&bytes),

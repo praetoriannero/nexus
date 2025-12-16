@@ -1,3 +1,4 @@
+pub use crate::default_to_owned;
 pub use crate::error::ParseError;
 pub use crate::pdu::{Pdu, PduBuilder, PduResult, Pob, pdu_trait_assert};
 pub use crate::raw::Raw;

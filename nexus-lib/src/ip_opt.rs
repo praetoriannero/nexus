@@ -1,10 +1,4 @@
-use crate::error::ParseError;
-use crate::pdu::{Pdu, Pob};
-
-use nexus_macros::{Tid, pdu_impl, pdu_type};
-use nexus_tid::Tid;
-use std::any::TypeId;
-use std::borrow::Cow;
+use crate::prelude::*;
 
 const IPV4_OPT_TYPE_OFFSET: usize = 0;
 const IPV4_OPT_SIZE_OFFSET: usize = 1;
@@ -51,6 +45,8 @@ impl<'a> Pdu<'a> for IpOption<'a> {
         res.extend_from_slice(&self.data);
         res
     }
+
+    default_to_owned!(IpOption);
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
         Ok(Box::new(Self {

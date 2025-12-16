@@ -29,6 +29,7 @@ where
     };
 
     if let Some(builder) = table.get(&value) {
+        println!("table dissect {}", bytes.len());
         builder(bytes).ok()
     } else {
         Raw::from_bytes(bytes).ok()

@@ -10,6 +10,8 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
     where
         Self: Sized;
 
+    fn to_owned(&self) -> Box<dyn Pdu<'static>>;
+
     fn to_json(&self) -> Result<Value, serde_json::error::Error>;
 
     fn to_bytes(&self) -> Vec<u8>;
@@ -52,6 +54,20 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
     }
 }
 
+#[macro_export]
+macro_rules! default_to_owned {
+    ($struct_name:ident) => {
+        fn to_owned(&self) -> Box<dyn Pdu<'static>> {
+            Box::new($struct_name {
+                header: Cow::Owned(self.header.to_vec()),
+                data: Cow::Owned(self.data.to_vec()),
+                parent: None,
+                child: None,
+            })
+        }
+    };
+}
+
 pub fn deserialize<'a, T: Pdu<'a>>(bytes: &'a [u8]) -> Option<T> {
     T::from_bytes(bytes).ok()?.downcast::<T>().map(|p| *p)
 }
@@ -63,6 +79,19 @@ pub type PduBuilder = for<'a> fn(&'a [u8]) -> PduResult<'a>;
 pub type PduResult<'a> = Result<Box<dyn Pdu<'a> + 'a>, ParseError>;
 
 pub type Pob<'a> = Option<Box<dyn Pdu<'a> + 'a>>;
+
+pub trait PobOwned {
+    fn to_owned(&self) -> Pob<'static>;
+}
+
+impl<'a> PobOwned for Pob<'a> {
+    fn to_owned(&self) -> Pob<'static> {
+        match self {
+            Some(_) => self.to_owned(),
+            None => None,
+        }
+    }
+}
 
 impl<'a> dyn Pdu<'a> + 'a {
     pub fn find<T: Pdu<'a> + 'a>(&self) -> Option<&'a T> {

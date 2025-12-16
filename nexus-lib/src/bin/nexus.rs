@@ -8,6 +8,9 @@ use pcap::Capture;
 fn main() {
     let mut cap = Capture::from_file("./data/test.pcapng").unwrap();
     let mut index = 0;
+
+    let mut pkt_vec: Vec<Box<dyn Pdu<'_>>> = Vec::new();
+
     while let Ok(packet) = cap.next_packet() {
         index += 1;
         println!(
@@ -24,6 +27,12 @@ fn main() {
         let Ok(mut eth_pdu) = Ethernet::from_bytes(&packet.data) else {
             continue;
         };
+
+        pkt_vec.push(eth_pdu.to_owned());
+        let Some(eth_pdu4) = eth_pdu.downcast_mut::<Ethernet>() else {
+            continue;
+        };
+        println!("{}", eth_pdu4.ether_type());
 
         if let Some(mut eth_pdu3) = deserialize::<Ethernet>(&packet.data) {
             println!("Old3 ether type {}", eth_pdu3.ether_type());
@@ -54,4 +63,5 @@ fn main() {
         let ip_pdu = inner.downcast_mut::<Ip>().unwrap();
         println!("{}", ip_pdu.src_addr());
     }
+    println!("{}", pkt_vec.len());
 }

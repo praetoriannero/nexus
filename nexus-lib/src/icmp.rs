@@ -76,6 +76,8 @@ impl<'a> Pdu<'a> for EchoReply<'a> {
         }))
     }
 
+    default_to_owned!(EchoReply);
+
     fn to_bytes(&self) -> Vec<u8> {
         let mut res = Vec::new();
         res.extend_from_slice(&self.header);
@@ -145,6 +147,7 @@ pub static ICMP_DISSECTION_TABLE: DissectionTable<IcmpType> = create_table();
 // register_pdu!(IcmpType(3), DestUnreachable, ICMP_DISSECTION_TABLE);
 // register_pdu!(IcmpType(5), RedirectMessage, ICMP_DISSECTION_TABLE);
 
+#[derive(Clone)]
 pub enum ControlMessage {
     EchoReply = 0,
     EchoRequest = 8,
@@ -187,6 +190,18 @@ impl<'a> Pdu<'a> for Icmp<'a> {
         res.extend_from_slice(&self.header);
         res.extend_from_slice(&self.data);
         res
+    }
+
+    fn to_owned(&self) -> Box<dyn Pdu<'static>> {
+        Box::new(Icmp {
+            header: Cow::Owned(self.header.to_vec()),
+            data: Cow::Owned(self.data.to_vec()),
+            child: None,
+            parent: None,
+            msg_type: self.msg_type.clone(),
+            msg_body: None,
+            header_len: self.header_len,
+        })
     }
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {

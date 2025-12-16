@@ -15,6 +15,8 @@ impl<'a> Pdu<'a> for Ipv6<'a> {
         res
     }
 
+    default_to_owned!(Ipv6);
+
     fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
         Ok(Box::new(Self {
             data: Cow::Borrowed(&bytes[IPV6_HEADER_LEN..]),
