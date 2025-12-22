@@ -1,25 +1,25 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{Data, DeriveInput, ItemImpl, parse_macro_input};
+use syn::{Data, DeriveInput, parse_macro_input};
 
 pub(crate) mod types;
 
 #[proc_macro_derive(Protocol, attributes(field))]
 pub fn derive_protocol(input: TokenStream) -> TokenStream {
     let input_struct = parse_macro_input!(input as DeriveInput);
-    let name = &input_struct.ident;
+    let _name = &input_struct.ident;
 
     let bitfields = match &input_struct.data {
         Data::Struct(s) => &s.fields,
-        _ => return quote! {compile_error!("Pstruct only works on structs"); }.into(),
+        _ => return quote! {compile_error!("Protocol only works on structs"); }.into(),
     };
 
-    let mut generated_methods: Vec<TokenStream> = Vec::new();
+    let mut _generated_methods: Vec<TokenStream> = Vec::new();
 
     for field in bitfields {
-        let ident = field.ident.as_ref().unwrap();
+        let _ident = field.ident.as_ref().unwrap();
 
-        let mut data = types::Field {
+        let mut _data = types::FieldMetadata {
             byte_offset: 0,
             bit_offset: 0,
             size: 0,
@@ -38,7 +38,6 @@ pub fn derive_protocol(input: TokenStream) -> TokenStream {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn it_works() {}

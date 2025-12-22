@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::prelude::*;
 
 const ECHO_REPLY_ID_OFFSET: usize = 0;

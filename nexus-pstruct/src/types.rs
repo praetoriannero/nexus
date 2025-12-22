@@ -1,34 +1,33 @@
 #![allow(dead_code)]
 
-// use num::ToPrimitive;
-// use num_traits::
-//
 pub enum Alignment {
     Left,
     Right,
 }
 
+/// Activates a field
 pub type ActivateCallback = fn(&[u8]) -> bool;
 
-/// Constructs a byte array from a &[u8]
-pub struct BytesField<const S: usize> {}
+/// Constructs a byte array
+pub struct BytesField<const S: usize, const O: usize> {}
 
-/// Used to skip bytes in a &[u8]
+/// Used to skip irrelevant bytes
 pub struct PadBytes<const S: usize> {}
 
 /// Constructs a bits field
 pub struct BitsField<const S: usize> {}
 
+/// Used to skip irrelevant bits
 pub struct PadBits<const S: usize> {}
 
-// pub struct Field<T: ToPrimitive> {}
-
-pub struct Test {
-    src: BytesField<4>,
-    dst: BytesField<4>,
+/// All Protocol fields must implement this
+pub trait ProtoField {
+    fn from_bytes(bytes: &[u8]);
+    fn to_bytes(&self) -> Vec<u8>;
 }
 
-pub struct Field {
+/// Contains metadata about the field
+pub struct FieldMetadata {
     pub byte_offset: usize,
     pub bit_offset: usize,
     pub size: usize,
@@ -40,7 +39,12 @@ pub struct Field {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::*;
+
+    pub struct Test {
+        src: BytesField<4, 0>,
+        dst: BytesField<4, 4>,
+    }
 
     #[test]
     fn it_works() {
