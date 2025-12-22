@@ -1,38 +1,69 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{Data, DeriveInput, parse_macro_input};
+use syn::{Data, DeriveInput, Fields, parse_macro_input};
 
 pub(crate) mod types;
 
 #[proc_macro_derive(Protocol, attributes(field))]
 pub fn derive_protocol(input: TokenStream) -> TokenStream {
-    let input_struct = parse_macro_input!(input as DeriveInput);
-    let _name = &input_struct.ident;
+    let input = parse_macro_input!(input as DeriveInput);
+    let struct_name = &input.ident;
 
-    let bitfields = match &input_struct.data {
-        Data::Struct(s) => &s.fields,
-        _ => return quote! {compile_error!("Protocol only works on structs"); }.into(),
+    let mut marked_fields = Vec::new();
+
+    let data = match &input.data {
+        Data::Struct(data) => data,
+        _ => {
+            return syn::Error::new_spanned(input.ident, "Protocol only supports structs")
+                .to_compile_error()
+                .into();
+        }
     };
 
-    let mut _generated_methods: Vec<TokenStream> = Vec::new();
+    match &data.fields {
+        Fields::Named(fields) => {
+            for field in &fields.named {
+                for attr in &field.attrs {
+                    if attr.path().is_ident("field") {
+                        match &attr.meta {
+                            syn::Meta::List(list) => {
+                                // parse list.tokens
+                            }
+                            syn::Meta::Path(_) => {
+                                // #[field] (no args)
+                            }
+                            _ => {}
+                        }
+                    }
+                }
 
-    for field in bitfields {
-        let _ident = field.ident.as_ref().unwrap();
+                let has_attr = field.attrs.iter().any(|a| a.path().is_ident("field"));
 
-        let mut _data = types::FieldMetadata {
-            byte_offset: 0,
-            bit_offset: 0,
-            size: 0,
-            bit_field: false,
-            activate: None,
-            repeated: false,
-            aligned: types::Alignment::Left,
-        };
-
-        // for attr in
+                if has_attr {
+                    let ident = field.ident.as_ref().unwrap();
+                    let ty = &field.ty;
+                    marked_fields.push((ident, ty));
+                }
+            }
+        }
+        _ => {
+            return syn::Error::new_spanned(&data.fields, "Protocol requires named fields")
+                .to_compile_error()
+                .into();
+        }
     }
 
-    let expanded = quote! {#input_struct};
+    // Example codegen using the marked fields
+    let field_names = marked_fields.iter().map(|(ident, _)| ident.to_string());
+
+    let expanded = quote! {
+        impl #struct_name {
+            pub fn marked_fields(&self) -> &'static [&'static str] {
+                &[#(#field_names),*]
+            }
+        }
+    };
+
     expanded.into()
 }
 

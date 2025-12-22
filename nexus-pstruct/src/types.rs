@@ -8,6 +8,9 @@ pub enum Alignment {
 /// Activates a field
 pub type ActivateCallback = fn(&[u8]) -> bool;
 
+/// Determine number of repeats of a field
+pub type RepeatCallback = fn(&[u8]) -> usize;
+
 /// Constructs a byte array
 pub struct BytesField<const S: usize, const O: usize> {}
 
@@ -33,7 +36,7 @@ pub struct FieldMetadata {
     pub size: usize,
     pub bit_field: bool,
     pub activate: Option<ActivateCallback>,
-    pub repeated: bool,
+    pub repeated: Option<RepeatCallback>,
     pub aligned: Alignment,
 }
 
