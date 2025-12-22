@@ -36,6 +36,24 @@ pub fn derive_tid(input: TokenStream) -> TokenStream {
 pub fn pdu_impl(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut impl_block = parse_macro_input!(item as ItemImpl);
 
+    let pdu_set_parent_method: syn::ImplItem = syn::parse_quote! {
+        fn set_parent(&mut self, parent: Pob<'static>)
+        where
+            'a: 'static,
+        {
+            self.parent = parent;
+        }
+    };
+
+    let pdu_set_child_method: syn::ImplItem = syn::parse_quote! {
+        fn set_child(&mut self, child: Pob<'static>)
+        where
+            'a: 'static,
+        {
+            self.child = child;
+        }
+    };
+
     let pdu_link_parent_method: syn::ImplItem = syn::parse_quote! {
         fn parent_pdu(&self) -> &Pob<'a> {
             &self.parent
@@ -60,6 +78,8 @@ pub fn pdu_impl(_attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     };
 
+    impl_block.items.push(pdu_set_parent_method);
+    impl_block.items.push(pdu_set_child_method);
     impl_block.items.push(pdu_link_child_mut_method);
     impl_block.items.push(pdu_link_parent_mut_method);
     impl_block.items.push(pdu_link_parent_method);
@@ -74,7 +94,6 @@ pub fn pdu_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let pdu_fields: syn::FieldsNamed = syn::parse_quote!({
         header: Cow<'a, [u8]>,
-        data: Cow<'a, [u8]>,
         parent: Pob<'a>,
         child: Pob<'a>,
     });

@@ -1,103 +1,101 @@
-use crate::{prelude::*, register_pdu};
+use crate::prelude::*;
 
 const ECHO_REPLY_ID_OFFSET: usize = 0;
 const ECHO_REPLY_SEQNUM_OFFSET: usize = 2;
 const ECHO_REPLY_DATA_OFFSET: usize = 4;
-
-#[pdu_type]
-pub struct EchoReply<'a> {}
-
-impl<'a> EchoReply<'a> {
-    pub fn new() -> Self {
-        Self {
-            header: Cow::Owned(Vec::new()),
-            data: Cow::Owned(Vec::new()),
-            parent: None,
-            child: None,
-        }
-    }
-
-    pub fn id(&self) -> u16 {
-        parse_bytes::<u16>(
-            &self.header[ECHO_REPLY_ID_OFFSET..ECHO_REPLY_SEQNUM_OFFSET],
-            Endian::Big,
-        )
-    }
-
-    pub fn set_id(&mut self, id: u16) {
-        self.header.to_mut()[ECHO_REPLY_ID_OFFSET..ECHO_REPLY_SEQNUM_OFFSET]
-            .copy_from_slice(&id.to_be_bytes());
-    }
-
-    pub fn with_id(&mut self, id: u16) -> &mut Self {
-        self.set_id(id);
-        self
-    }
-
-    pub fn seq_number(&self) -> u16 {
-        parse_bytes::<u16>(
-            &self.header[ECHO_REPLY_SEQNUM_OFFSET..ECHO_REPLY_DATA_OFFSET],
-            Endian::Big,
-        )
-    }
-
-    pub fn set_seq_number(&mut self, seq_number: u16) {
-        self.header.to_mut()[ECHO_REPLY_SEQNUM_OFFSET..ECHO_REPLY_DATA_OFFSET]
-            .copy_from_slice(&seq_number.to_be_bytes());
-    }
-
-    pub fn with_seq_number(&mut self, seq_number: u16) -> &mut Self {
-        self.set_seq_number(seq_number);
-        self
-    }
-
-    pub fn data(&self) -> &[u8] {
-        &self.header[ECHO_REPLY_DATA_OFFSET..]
-    }
-
-    pub fn set_data(&mut self, data: &[u8]) {
-        self.data = Cow::Owned(data.to_vec());
-    }
-
-    pub fn with_data(&mut self, data: &[u8]) -> &mut Self {
-        self.set_data(data);
-        self
-    }
-}
-
-#[pdu_impl]
-impl<'a> Pdu<'a> for EchoReply<'a> {
-    fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
-        Ok(Box::new(Self {
-            header: Cow::Borrowed(&bytes[..ECHO_REPLY_DATA_OFFSET]),
-            data: Cow::Borrowed(&bytes[ECHO_REPLY_DATA_OFFSET..]),
-            parent: None,
-            child: None,
-        }))
-    }
-
-    default_to_owned!(EchoReply);
-
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut res = Vec::new();
-        res.extend_from_slice(&self.header);
-        res.extend_from_slice(&self.data);
-        res
-    }
-
-    fn to_json(&self) -> Result<serde_json::Value, serde_json::error::Error> {
-        Ok(json!({
-            "echo_reply": {
-                "echo_reply.id": self.id(),
-                "echo_reply.seq_number": self.seq_number(),
-                "echo_reply.data": printable_ascii(&self.data)
-            }
-        }))
-    }
-}
-
-register_pdu!(IcmpType(0), EchoReply, ICMP_DISSECTION_TABLE);
-
+//
+// #[pdu_type]
+// pub struct EchoReply<'a> {
+//     data: Cow<'a, [u8]>,
+// }
+//
+// impl<'a> EchoReply<'a> {
+//     pub fn new() -> Self {
+//         Self {
+//             header: Cow::Owned(Vec::new()),
+//             parent: None,
+//             child: None,
+//         }
+//     }
+//
+//     pub fn id(&self) -> u16 {
+//         parse_bytes::<u16>(
+//             &self.header[ECHO_REPLY_ID_OFFSET..ECHO_REPLY_SEQNUM_OFFSET],
+//             Endian::Big,
+//         )
+//     }
+//
+//     pub fn set_id(&mut self, id: u16) {
+//         self.header.to_mut()[ECHO_REPLY_ID_OFFSET..ECHO_REPLY_SEQNUM_OFFSET]
+//             .copy_from_slice(&id.to_be_bytes());
+//     }
+//
+//     pub fn with_id(&mut self, id: u16) -> &mut Self {
+//         self.set_id(id);
+//         self
+//     }
+//
+//     pub fn seq_number(&self) -> u16 {
+//         parse_bytes::<u16>(
+//             &self.header[ECHO_REPLY_SEQNUM_OFFSET..ECHO_REPLY_DATA_OFFSET],
+//             Endian::Big,
+//         )
+//     }
+//
+//     pub fn set_seq_number(&mut self, seq_number: u16) {
+//         self.header.to_mut()[ECHO_REPLY_SEQNUM_OFFSET..ECHO_REPLY_DATA_OFFSET]
+//             .copy_from_slice(&seq_number.to_be_bytes());
+//     }
+//
+//     pub fn with_seq_number(&mut self, seq_number: u16) -> &mut Self {
+//         self.set_seq_number(seq_number);
+//         self
+//     }
+//
+//     pub fn data(&self) -> &[u8] {
+//         &self.header[ECHO_REPLY_DATA_OFFSET..]
+//     }
+//
+//     pub fn set_data(&mut self, data: &[u8]) {
+//         self.data = Cow::Owned(data.to_vec());
+//     }
+//
+//     pub fn with_data(&mut self, data: &[u8]) -> &mut Self {
+//         self.set_data(data);
+//         self
+//     }
+// }
+//
+// #[pdu_impl]
+// impl<'a> Pdu<'a> for EchoReply<'a> {
+//     fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
+//         Ok(Box::new(Self {
+//             header: Cow::Borrowed(&bytes[..ECHO_REPLY_DATA_OFFSET]),
+//             parent: None,
+//             child: None,
+//         }))
+//     }
+//
+//     fn to_bytes(&self) -> Vec<u8> {
+//         let mut res = Vec::new();
+//         res.extend_from_slice(&self.header);
+//         res.extend_from_slice(&self.data);
+//         res
+//     }
+//
+//     fn to_json(&self) -> Result<serde_json::Value, serde_json::error::Error> {
+//         Ok(json!({
+//             "echo_reply": {
+//                 "echo_reply.id": self.id(),
+//                 "echo_reply.seq_number": self.seq_number(),
+//                 "echo_reply.data": printable_ascii(&self.data)
+//             }
+//         }))
+//     }
+// }
+//
+// register_pdu!(IcmpType(0), EchoReply, ICMP_DISSECTION_TABLE);
+//
 #[pdu_type]
 pub struct DestUnreachable<'a> {}
 
@@ -188,14 +186,12 @@ impl<'a> Pdu<'a> for Icmp<'a> {
     fn to_bytes(&self) -> Vec<u8> {
         let mut res = Vec::new();
         res.extend_from_slice(&self.header);
-        res.extend_from_slice(&self.data);
         res
     }
 
-    fn to_owned(&self) -> Box<dyn Pdu<'static>> {
+    fn clone(&self) -> Box<dyn Pdu<'static>> {
         Box::new(Icmp {
             header: Cow::Owned(self.header.to_vec()),
-            data: Cow::Owned(self.data.to_vec()),
             child: None,
             parent: None,
             msg_type: self.msg_type.clone(),
@@ -208,7 +204,6 @@ impl<'a> Pdu<'a> for Icmp<'a> {
         // TODO: parse message type
         Ok(Box::new(Self {
             header: Cow::Borrowed(&bytes[..ICMP_MIN_SIZE]),
-            data: Cow::Borrowed(&bytes[ICMP_MIN_SIZE..]),
             msg_type: ControlMessage::Undefined,
             msg_body: None,
             header_len: ICMP_MIN_SIZE,
@@ -220,7 +215,7 @@ impl<'a> Pdu<'a> for Icmp<'a> {
     fn to_json(&self) -> Result<serde_json::Value, serde_json::Error> {
         Ok(json!({
             "icmp": {
-                "icmp.data": printable_ascii(&self.data)
+                "icmp.data": self.child_to_json(),
             }
         }))
     }

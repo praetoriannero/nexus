@@ -1,8 +1,8 @@
-use crate::prelude::*;
+use crate::{default_pdu_clone, prelude::*};
 
 const IPV4_OPT_TYPE_OFFSET: usize = 0;
 const IPV4_OPT_SIZE_OFFSET: usize = 1;
-const IPV4_OPT_DATA_OFFSET: usize = 3;
+// const IPV4_OPT_DATA_OFFSET: usize = 3;
 const IPV4_OPT_SIZE: usize = 2;
 
 pub fn get_ip_opt_type(bytes: &[u8]) -> u8 {
@@ -42,16 +42,15 @@ pub struct IpOption<'a> {}
 impl<'a> Pdu<'a> for IpOption<'a> {
     fn to_bytes(&self) -> Vec<u8> {
         let mut res = Vec::new();
-        res.extend_from_slice(&self.data);
+        res.extend_from_slice(&self.header);
         res
     }
 
-    default_to_owned!(IpOption);
+    default_pdu_clone!(IpOption);
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
         Ok(Box::new(Self {
             header: Cow::Borrowed(&bytes),
-            data: Cow::Owned(Vec::new()),
             parent: None,
             child: None,
         }))
@@ -66,7 +65,6 @@ impl<'a> IpOption<'a> {
     pub fn new() -> Self {
         Self {
             header: Cow::Owned(vec![0; IPV4_OPT_SIZE]),
-            data: Cow::Owned(Vec::new()),
             child: None,
             parent: None,
         }
@@ -98,18 +96,18 @@ impl<'a> IpOption<'a> {
         self
     }
 
-    pub fn opt_data(&self) -> &[u8] {
-        &self.header[IPV4_OPT_DATA_OFFSET..self.opt_length() as usize]
-    }
-
-    pub fn set_opt_data(&mut self, data: &[u8]) {
-        self.data.to_mut().extend_from_slice(data);
-    }
-
-    pub fn with_opt_data(&mut self, data: &[u8]) -> &mut Self {
-        self.set_opt_data(data);
-        self
-    }
+    // pub fn opt_data(&self) -> &[u8] {
+    //     &self.header[IPV4_OPT_DATA_OFFSET..self.opt_length() as usize]
+    // }
+    //
+    // pub fn set_opt_data(&mut self, data: &[u8]) {
+    //     self.data.to_mut().extend_from_slice(data);
+    // }
+    //
+    // pub fn with_opt_data(&mut self, data: &[u8]) -> &mut Self {
+    //     self.set_opt_data(data);
+    //     self
+    // }
 }
 
 #[cfg(test)]

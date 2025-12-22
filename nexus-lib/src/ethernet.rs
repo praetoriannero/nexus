@@ -1,7 +1,5 @@
 use crate::mac_address::MacAddress;
-use crate::pdu::PobOwned;
 use crate::prelude::*;
-use crate::table::{DissectionTable, build_from_table, create_table};
 
 const ETH_DST_OFFSET: usize = 0;
 const ETH_SRC_OFFSET: usize = 6;
@@ -28,14 +26,12 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
     fn to_bytes(&self) -> Vec<u8> {
         let mut res = Vec::new();
         res.extend_from_slice(&self.header);
-        res.extend_from_slice(&self.data);
         res
     }
 
-    fn to_owned(&self) -> Box<dyn Pdu<'static>> {
+    fn clone(&self) -> Box<dyn Pdu<'static> + 'static> {
         Box::new(Ethernet {
             header: Cow::Owned(self.header.to_vec()),
-            data: Cow::Owned(self.data.to_vec()),
             parent: None,
             child: None,
         })
@@ -56,7 +52,6 @@ impl<'a> Pdu<'a> for Ethernet<'a> {
 
         Ok(Box::new(Self {
             header: Cow::Borrowed(&bytes[..ETH_HEADER_LEN]),
-            data: Cow::Owned(Vec::new()),
             parent: None,
             child: Some(inner),
         }))
@@ -78,7 +73,6 @@ impl<'a> Ethernet<'a> {
     pub fn new() -> Self {
         Self {
             header: Cow::Owned(vec![0; ETH_HEADER_LEN]),
-            data: Cow::Owned(Vec::new()),
             parent: None,
             child: None,
         }
@@ -126,13 +120,5 @@ impl<'a> Ethernet<'a> {
 
     pub fn ether_type(&self) -> u16 {
         get_ether_type(&self.header)
-    }
-
-    pub fn payload(&self) -> &[u8] {
-        &self.data
-    }
-
-    pub fn set_payload(&mut self, payload: &[u8]) {
-        self.data.to_mut().copy_from_slice(payload);
     }
 }

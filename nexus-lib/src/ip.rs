@@ -1,9 +1,6 @@
 use crate::ethernet::{ETHER_DISSECTION_TABLE, EtherType};
 use crate::ip_opt::IpOption;
-use crate::pdu::PobOwned;
 use crate::prelude::*;
-use crate::register_pdu;
-use crate::utils::{Endian, parse_bytes};
 
 use std::net::Ipv4Addr;
 
@@ -47,10 +44,9 @@ fn pdu_from_type<'a>(ether_type: Ipv4Type, bytes: &'a [u8]) -> Pob<'a> {
 
 #[pdu_impl]
 impl<'a> Pdu<'a> for Ip<'a> {
-    fn to_owned(&self) -> Box<dyn Pdu<'static>> {
+    fn clone(&self) -> Box<dyn Pdu<'static> + 'static> {
         Box::new(Ip {
             header: Cow::Owned(self.header.to_vec()),
-            data: Cow::Owned(self.data.to_vec()),
             opts: Vec::new(),
             parent: None,
             child: None,
@@ -85,7 +81,6 @@ impl<'a> Pdu<'a> for Ip<'a> {
         let result = Self {
             opts: Vec::new(),
             header: Cow::Borrowed(&bytes[..header_len]),
-            data: Cow::Owned(Vec::new()),
             child: Some(inner),
             parent: None,
         };
@@ -107,7 +102,6 @@ impl<'a> Ip<'a> {
         Self {
             opts: Vec::new(),
             header: Cow::Owned(vec![0; IPV4_HEADER_LEN]),
-            data: Cow::Owned(Vec::new()),
             child: None,
             parent: None,
         }
@@ -373,33 +367,9 @@ impl<'a> Ip<'a> {
 #[derive(Hash, Eq, PartialEq)]
 pub struct Ipv4Type(pub u8);
 
-pub static IPV4_DISSECTION_TABLE: LazyLock<RwLock<HashMap<Ipv4Type, PduBuilder>>> =
-    LazyLock::new(|| RwLock::new(HashMap::new()));
-
-#[macro_export]
-macro_rules! register_ipv4_type {
-    ($ip_type:expr, $builder:ident) => {
-        paste! {
-            #[ctor]
-            fn [<__nexus_register_ipv4_type_ $builder:lower>]() {
-                pdu_trait_assert::<$builder>();
-                if IPV4_DISSECTION_TABLE
-                    .write()
-                    .unwrap()
-                    .insert($ip_type, |bytes: &'_ [u8]| -> PduResult<'_> {
-                        $builder::from_bytes(bytes)
-                    })
-                    .is_some()
-                {
-                    panic!("IPv4 types can only be added once.")
-                };
-            }
-        }
-    };
-}
+pub static IPV4_DISSECTION_TABLE: DissectionTable<Ipv4Type> = create_table();
 
 register_pdu!(EtherType(0x0800), Ip, ETHER_DISSECTION_TABLE);
-// register_eth_type!(EtherType(0x0800), Ip);
 
 #[cfg(test)]
 mod tests {

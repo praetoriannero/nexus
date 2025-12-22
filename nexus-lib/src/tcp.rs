@@ -1,6 +1,6 @@
 use crate::ip::{IPV4_DISSECTION_TABLE, Ipv4Type};
 use crate::prelude::*;
-use crate::register_ipv4_type;
+use crate::{default_pdu_clone, register_pdu};
 
 const TCP_MIN_HEADER_LEN: usize = 24;
 const TCP_DATA_SIZE_OFFSET: usize = 12;
@@ -26,11 +26,11 @@ fn get_data_offset<'a>(bytes: &'a [u8]) -> usize {
 impl<'a> Pdu<'a> for Tcp<'a> {
     fn to_bytes(&self) -> Vec<u8> {
         let mut res = Vec::new();
-        res.extend_from_slice(&self.data);
+        res.extend_from_slice(&self.header);
         res
     }
 
-    default_to_owned!(Tcp);
+    default_pdu_clone!(Tcp);
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
         let header_size = get_data_offset(bytes);
@@ -41,7 +41,6 @@ impl<'a> Pdu<'a> for Tcp<'a> {
 
         Ok(Box::new(Self {
             header: Cow::Borrowed(&bytes[..header_size]),
-            data: Cow::Borrowed(&bytes[header_size..]),
             parent: None,
             child: None,
         }))
@@ -60,7 +59,7 @@ impl<'a> Pdu<'a> for Tcp<'a> {
                 "tcp.window": self.window(),
                 "tcp.checksum": self.checksum(),
                 "tcp.urg_pointer": self.urg_pointer(),
-                "tcp.data": printable_ascii(&self.data),
+                "tcp.data": self.child_to_json(),
             }
         }))
     }
@@ -227,4 +226,5 @@ impl<'a> Tcp<'a> {
     }
 }
 
-register_ipv4_type!(Ipv4Type(0x6), Tcp);
+register_pdu!(Ipv4Type(0x6), Tcp, IPV4_DISSECTION_TABLE);
+// register_ipv4_type!(Ipv4Type(0x6), Tcp);

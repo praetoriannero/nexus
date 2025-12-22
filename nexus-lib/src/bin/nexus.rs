@@ -28,7 +28,7 @@ fn main() {
             continue;
         };
 
-        pkt_vec.push(eth_pdu.to_owned());
+        pkt_vec.push(eth_pdu.clone());
         let Some(eth_pdu4) = eth_pdu.downcast_mut::<Ethernet>() else {
             continue;
         };

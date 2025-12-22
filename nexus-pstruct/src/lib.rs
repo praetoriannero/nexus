@@ -14,27 +14,19 @@ pub fn derive_protocol(input: TokenStream) -> TokenStream {
         _ => return quote! {compile_error!("Pstruct only works on structs"); }.into(),
     };
 
-    struct Field {
-        byte_offset: usize,
-        bit_offset: usize,
-        size: usize,
-        bit_field: bool,
-        activate: Option<String>,
-        repeated: bool,
-    }
-
     let mut generated_methods: Vec<TokenStream> = Vec::new();
 
     for field in bitfields {
         let ident = field.ident.as_ref().unwrap();
 
-        let mut data = Field {
+        let mut data = types::Field {
             byte_offset: 0,
             bit_offset: 0,
             size: 0,
             bit_field: false,
             activate: None,
             repeated: false,
+            aligned: types::Alignment::Left,
         };
 
         // for attr in

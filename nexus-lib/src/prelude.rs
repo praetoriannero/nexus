@@ -1,9 +1,9 @@
-pub use crate::default_to_owned;
 pub use crate::error::ParseError;
 pub use crate::pdu::{Pdu, PduBuilder, PduResult, Pob, pdu_trait_assert};
 pub use crate::raw::Raw;
-pub use crate::table::{DissectionTable, create_table};
+pub use crate::table::{DissectionTable, build_from_table, create_table};
 pub use crate::utils::{Endian, parse_bytes, printable_ascii};
+pub use crate::{default_pdu_clone, register_pdu};
 
 pub use ctor::ctor;
 pub use nexus_macros::{Tid, pdu_impl, pdu_type};

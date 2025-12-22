@@ -1,7 +1,6 @@
 use crate::ip::{IPV4_DISSECTION_TABLE, Ipv4Type};
 use crate::ip6::{IPV6_DISSECTION_TABLE, Ipv6Type};
 use crate::prelude::*;
-use crate::{register_ipv4_type, register_ipv6_type};
 
 const UDP_HEADER_LEN: usize = 8;
 const UDP_SPORT_OFFSET: usize = 0;
@@ -17,16 +16,14 @@ impl<'a> Pdu<'a> for Udp<'a> {
     fn to_bytes(&self) -> Vec<u8> {
         let mut res = Vec::new();
         res.extend_from_slice(&self.header);
-        res.extend_from_slice(&self.data);
         res
     }
 
-    default_to_owned!(Udp);
+    default_pdu_clone!(Udp);
 
     fn from_bytes(bytes: &'a [u8]) -> Result<Box<dyn Pdu<'a> + 'a>, ParseError> {
         // TODO: add dissection table logic
         Ok(Box::new(Self {
-            data: Cow::Borrowed(&bytes[UDP_HEADER_LEN..]),
             header: Cow::Borrowed(&bytes[..UDP_HEADER_LEN]),
             parent: None,
             child: None,
@@ -40,7 +37,7 @@ impl<'a> Pdu<'a> for Udp<'a> {
                 "udp.dport": self.dst_port(),
                 "udp.length": self.length(),
                 "udp.checksum": self.checksum(),
-                "udp.data": printable_ascii(&self.data)
+                "udp.data": self.child_to_json(),
             }
         }))
     }
@@ -121,32 +118,9 @@ impl<'a> Udp<'a> {
     }
 }
 
-register_ipv4_type!(Ipv4Type(0x11), Udp);
-register_ipv6_type!(Ipv6Type(0x11), Udp);
+register_pdu!(Ipv4Type(0x11), Udp, IPV4_DISSECTION_TABLE);
+register_pdu!(Ipv6Type(0x11), Udp, IPV6_DISSECTION_TABLE);
 
 pub struct UdpType(pub u16);
 
-pub static UDP_DISSECTION_TABLE: LazyLock<RwLock<HashMap<UdpType, PduBuilder>>> =
-    LazyLock::new(|| RwLock::new(HashMap::new()));
-
-#[macro_export]
-macro_rules! register_udp_type {
-    ($udp_type:expr, $builder:ident) => {
-        paste! {
-            #[ctor]
-            fn [<__nexus_register_udp_type_ $builder:lower>]() {
-                pdu_trait_assert::<$builder>();
-                if UDP_DISSECTION_TABLE
-                    .write()
-                    .unwrap()
-                    .insert($udp_type, |bytes: &'_ [u8]| -> PduResult<'_> {
-                        $builder::from_bytes(bytes)
-                    })
-                    .is_some()
-                {
-                    panic!("UDP types can only be added once.")
-                };
-            }
-        }
-    };
-}
+pub static UDP_DISSECTION_TABLE: DissectionTable<UdpType> = create_table();

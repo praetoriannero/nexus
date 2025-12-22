@@ -10,11 +10,27 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
     where
         Self: Sized;
 
-    fn to_owned(&self) -> Box<dyn Pdu<'static>>;
+    fn clone(&self) -> Box<dyn Pdu<'static> + 'static>;
+
+    fn collect(&self, chain: &mut Vec<Box<dyn Pdu<'static> + 'static>>) {
+        chain.push(self.clone());
+        match self.child_pdu() {
+            Some(inner) => inner.collect(chain),
+            None => (),
+        }
+    }
 
     fn to_json(&self) -> Result<Value, serde_json::error::Error>;
 
     fn to_bytes(&self) -> Vec<u8>;
+
+    fn set_parent(&mut self, parent: Pob<'static>)
+    where
+        'a: 'static;
+
+    fn set_child(&mut self, child: Pob<'static>)
+    where
+        'a: 'static;
 
     fn parent_pdu_mut(&mut self) -> &mut Pob<'a>;
 
@@ -55,12 +71,11 @@ pub trait Pdu<'a>: Tid<'a> + 'a {
 }
 
 #[macro_export]
-macro_rules! default_to_owned {
+macro_rules! default_pdu_clone {
     ($struct_name:ident) => {
-        fn to_owned(&self) -> Box<dyn Pdu<'static>> {
+        fn clone(&self) -> Box<dyn Pdu<'static> + 'static> {
             Box::new($struct_name {
                 header: Cow::Owned(self.header.to_vec()),
-                data: Cow::Owned(self.data.to_vec()),
                 parent: None,
                 child: None,
             })
@@ -81,13 +96,16 @@ pub type PduResult<'a> = Result<Box<dyn Pdu<'a> + 'a>, ParseError>;
 pub type Pob<'a> = Option<Box<dyn Pdu<'a> + 'a>>;
 
 pub trait PobOwned {
-    fn to_owned(&self) -> Pob<'static>;
+    fn clone(&self) -> Pob<'static>;
 }
 
 impl<'a> PobOwned for Pob<'a> {
-    fn to_owned(&self) -> Pob<'static> {
+    fn clone(&self) -> Option<Box<dyn Pdu<'static> + 'static>>
+    where
+        Self: Sized,
+    {
         match self {
-            Some(_) => self.to_owned(),
+            Some(boxed) => Some((*boxed).clone()),
             None => None,
         }
     }
