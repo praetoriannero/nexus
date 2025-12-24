@@ -26,7 +26,7 @@ pub fn derive_protocol(input: TokenStream) -> TokenStream {
                 for attr in &field.attrs {
                     if attr.path().is_ident("field") {
                         match &attr.meta {
-                            syn::Meta::List(list) => {
+                            syn::Meta::List(_list) => {
                                 // parse list.tokens
                             }
                             syn::Meta::Path(_) => {

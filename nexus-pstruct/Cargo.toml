@@ -8,6 +8,7 @@ proc-macro = true
 
 
 [dependencies]
+arbitrary-int = "2.0.0"
 num = "0.4.3"
 quote = "1.0.42"
 syn = "2.0.111"

@@ -21,6 +21,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arbitrary-int"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c858caffa49edfc4ecc45a4bec37abd3e88041a2903816f10f990b7b41abc281"
+
+[[package]]
 name = "arrayref"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -37,6 +43,13 @@ name = "better_any"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1795ebc740ea791ffbe6685e0688ab1effec16c2864e0476db40bfdf0c02cb3d"
+
+[[package]]
+name = "bit-ext"
+version = "0.1.0"
+dependencies = [
+ "arbitrary-int",
+]
 
 [[package]]
 name = "bitfield-struct"
@@ -285,6 +298,7 @@ dependencies = [
 name = "nexus-pstruct"
 version = "0.1.0"
 dependencies = [
+ "arbitrary-int",
  "num",
  "quote",
  "syn",

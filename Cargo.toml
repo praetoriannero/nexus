@@ -1,6 +1,8 @@
 [workspace]
 members = [
+    "bit-ext",
     "nexus-lib",
-    "nexus-macros", "nexus-pstruct",
+    "nexus-macros",
+    "nexus-pstruct",
     "nexus-tid"
 ]
