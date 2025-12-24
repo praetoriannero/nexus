@@ -8,7 +8,8 @@ proc-macro = true
 
 
 [dependencies]
+bit-ext = { path = "../bit-ext"}
 arbitrary-int = "2.0.0"
 num = "0.4.3"
 quote = "1.0.42"
-syn = "2.0.111"
+syn = {version = "2.0.111", features = ["full"]}

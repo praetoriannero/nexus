@@ -47,7 +47,8 @@ use nexus_pstruct::Protocol;
 //      pad_right: usize,
 //      pad_left: usize,
 //      count: fn(&[u8]) -> usize,
-//      activate: fn(&[u8]) -> bool,
+//      enable: fn(&[u8]) -> bool,
+//      disable: fn(&[u8]) -> bool,
 //  )]
 
 #[test]
@@ -55,6 +56,7 @@ fn integ() {
     #![allow(dead_code)]
 
     use arbitrary_int::prelude::*;
+    use bit_ext::prelude::*;
     #[derive(Protocol, Default)]
     struct Ipv4 {
         #[field]
@@ -86,6 +88,10 @@ fn integ() {
         // Payload: "hello"
         0x68, 0x65, 0x6C, 0x6C, 0x6F,
     ];
+
     let p = Ipv4::default();
-    p.marked_fields();
+    println!("{}", p.version());
+    println!("{}", p.ihl());
+    println!("{:?}", p.marked_fields());
+    println!("Ipv4::total_width() = {}", Ipv4::total_width());
 }
