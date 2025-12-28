@@ -1,16 +1,28 @@
 use proc_macro::TokenStream;
-use quote::quote;
-use syn::{Data, DeriveInput, Fields, ItemImpl, parse_macro_input};
+use quote::{format_ident, quote};
+use syn::{Data, DeriveInput, Fields, parse_macro_input};
 
 pub(crate) mod types;
 
-#[proc_macro_derive(Protocol, attributes(field))]
-pub fn derive_protocol(input: TokenStream) -> TokenStream {
-    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+struct FieldMeta {
+    skip: bool,
+    pad_right: usize,
+    pad_left: usize,
+    repeat: Option<fn(&[u8]) -> usize>,
+    enable: Option<fn(&[u8]) -> bool>,
+    endian: String,
+}
 
-    let struct_name = &input.ident;
+#[proc_macro_derive(Protocol, attributes(field, header))]
+pub fn derive_protocol(input_stream: TokenStream) -> TokenStream {
+    // let tokens = input_stream.clone();
+    let input: DeriveInput = parse_macro_input!(input_stream as DeriveInput);
 
     let mut marked_fields: Vec<(syn::Ident, syn::Type)> = Vec::new();
+
+    let ident = &input.ident;
+    let generics = &input.generics;
+    let where_clause = &generics.where_clause;
 
     let data = match &input.data {
         Data::Struct(data) => data,
@@ -36,6 +48,9 @@ pub fn derive_protocol(input: TokenStream) -> TokenStream {
                             _ => {}
                         }
                     }
+                    if attr.path().is_ident("header") {
+                        continue;
+                    }
                 }
 
                 let has_attr = field.attrs.iter().any(|a| a.path().is_ident("field"));
@@ -53,21 +68,6 @@ pub fn derive_protocol(input: TokenStream) -> TokenStream {
                 .into();
         }
     }
-
-    // let mut impl_block = parse_macro_input!(item as ItemImpl);
-    //
-    // let pdu_set_parent_method: syn::ImplItem = syn::parse_quote! {
-    //     fn set_parent(&mut self, parent: Pob<'static>)
-    //     where
-    //         'a: 'static,
-    //     {
-    //         self.parent = parent;
-    //     }
-    // };
-    //
-    // impl_block.items.push(pdu_link_child_method);
-    //
-    // quote!(#impl_block).into()
 
     let mut fields_to_sum: Vec<syn::Type> = vec![];
     match input.clone().data {
@@ -90,8 +90,8 @@ pub fn derive_protocol(input: TokenStream) -> TokenStream {
 
     let field_names = marked_fields.iter().map(|(ident, _)| ident.to_string());
 
-    let expanded = quote! {
-        impl #struct_name {
+    let base_impl_expanded = quote! {
+        impl #generics #ident #generics #where_clause {
             pub fn marked_fields(&self) -> &'static [&'static str] {
                 &[#(#field_names),*]
             }
@@ -102,26 +102,68 @@ pub fn derive_protocol(input: TokenStream) -> TokenStream {
         }
     };
 
-    // let mut ts = expanded.into();
     let mut gen_methods: Vec<syn::ItemImpl> = Vec::new();
-
     let mut summed_fields: Vec<syn::Type> = Vec::new();
     for (name, ty) in marked_fields.iter() {
         summed_fields.push(ty.clone());
-        let field_getter: syn::ItemImpl = syn::parse_quote! {
-            impl #struct_name {
-                pub fn #name(&self) -> usize {
-                    0 #( + #summed_fields::width() )*
+        let field_set_name = format_ident!("set_{}", name);
+        let field_with_name = format_ident!("with_{}", name);
+        let field_get_name = format_ident!("{}", name);
+
+        let bit_offset: syn::Stmt = syn::parse_quote! {
+            let bit_offset = 0 #( + #summed_fields::width() )*;
+        };
+        let bit_mask: syn::Stmt = syn::parse_quote! {};
+
+        let field_get: syn::ItemImpl = syn::parse_quote! {
+            impl #generics #ident #generics #where_clause {
+                pub fn #field_get_name(&self) -> #ty {
+                    // 0 #( + #summed_fields::width() )*
+                    self.#name
                 }
             }
         };
 
-        gen_methods.push(field_getter);
+        gen_methods.push(field_get);
     }
 
     quote! {
+        // #struct_expanded
+        #base_impl_expanded
         # ( #gen_methods )*
-        #expanded
     }
     .into()
+}
+
+#[proc_macro_attribute]
+pub fn proto_base(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let mut struct_kind: syn::ItemStruct = syn::parse(item.clone()).unwrap();
+
+    let pdu_fields: syn::FieldsNamed = syn::parse_quote!({
+        __header: Cow<'a, [u8]>,
+        __parent: Option<String>,
+        __child: Option<String>,
+    });
+
+    if let syn::Fields::Named(fields) = &mut struct_kind.fields {
+        fields.named.extend(pdu_fields.named);
+    }
+
+    quote!(#struct_kind).into()
+}
+
+#[proc_macro_attribute]
+pub fn protocol(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let mut struct_kind: syn::ItemStruct = syn::parse(item.clone()).unwrap();
+    let proto_base_attr: syn::Attribute = syn::parse_quote!(
+        #[proto_base]
+    );
+    let derive_protocol: syn::Attribute = syn::parse_quote!(
+        #[derive(Protocol)]
+    );
+
+    struct_kind.attrs.push(proto_base_attr);
+    struct_kind.attrs.push(derive_protocol);
+
+    quote!(#struct_kind).into()
 }

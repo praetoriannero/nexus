@@ -1,5 +1,3 @@
-use nexus_pstruct::Protocol;
-
 //  #[derive(Protocol)]
 //  struct Ipv4 {
 //      #[field]
@@ -57,12 +55,35 @@ fn integ() {
 
     use arbitrary_int::prelude::*;
     use bit_ext::prelude::*;
-    #[derive(Protocol, Default)]
-    struct Ipv4 {
+    use nexus_pstruct::{Protocol, proto_base};
+    use std::borrow::Cow;
+
+    #[proto_base]
+    #[derive(Protocol, Default, Clone)]
+    struct Ipv4<'a> {
         #[field]
         version: u4,
+
         #[field]
         ihl: u4,
+
+        #[field]
+        total_len: u16,
+
+        #[field]
+        identification: u16,
+
+        #[field(hidden = true)]
+        reserved: bool,
+
+        #[field]
+        dont_frag: bool,
+
+        #[field]
+        more_frags: bool,
+
+        #[field]
+        frag_offset: u13,
     }
 
     let _ipv4_tcp_hello: [u8; 45] = [
@@ -92,6 +113,5 @@ fn integ() {
     let p = Ipv4::default();
     println!("{}", p.version());
     println!("{}", p.ihl());
-    println!("{:?}", p.marked_fields());
     println!("Ipv4::total_width() = {}", Ipv4::total_width());
 }

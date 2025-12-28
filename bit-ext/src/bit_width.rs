@@ -277,3 +277,6 @@ impl_bit_width!(u125, 125, 16);
 impl_bit_width!(u126, 126, 16);
 impl_bit_width!(u127, 127, 16);
 impl_bit_width!(u128, 128, 16);
+
+impl_bit_width!(bool, 1, 8);
+// impl_bit_width!()
