@@ -20,8 +20,12 @@ serde_json = "1.0.145"
 ctor = "0.6.3"
 paste = "1.0.15"
 dyn-clone = "1.0.20"
+deku = "0.20.2"
 
 [[bin]]
 name = "nexus"
 source = "src/bin/nexus.rs"
 
+[[example]]
+name = "eth2"
+path = "examples/eth2.rs"

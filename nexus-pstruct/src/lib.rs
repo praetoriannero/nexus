@@ -105,25 +105,55 @@ pub fn derive_protocol(input_stream: TokenStream) -> TokenStream {
     let mut gen_methods: Vec<syn::ItemImpl> = Vec::new();
     let mut summed_fields: Vec<syn::Type> = Vec::new();
     for (name, ty) in marked_fields.iter() {
-        summed_fields.push(ty.clone());
-        let field_set_name = format_ident!("set_{}", name);
-        let field_with_name = format_ident!("with_{}", name);
-        let field_get_name = format_ident!("{}", name);
+        let field_set_fn_name = format_ident!("set_{}", name);
+        let field_with_fn_name = format_ident!("with_{}", name);
+        let field_get_fn_name = format_ident!("{}", name);
+        let field_meta_fn_name = format_ident! {"__{}_metadata", name};
 
-        let bit_offset: syn::Stmt = syn::parse_quote! {
-            let bit_offset = 0 #( + #summed_fields::width() )*;
+        let bit_offset_low_stmt: syn::Stmt = syn::parse_quote! {
+            let bit_offset_low = 0 #( + #summed_fields::width() )*;
         };
-        let bit_mask: syn::Stmt = syn::parse_quote! {};
+
+        let bit_offset_high_stmt: syn::Stmt = syn::parse_quote! {
+            let bit_offset_high = bit_offset_low + #ty::width();
+        };
+
+        let byte_offset_low_stmt: syn::Stmt = syn::parse_quote! {
+            let byte_offset_low = bit_offset_low / 8;
+        };
+
+        let byte_offset_high_stmt: syn::Stmt = syn::parse_quote! {
+            let byte_offset_high = bit_offset_high.div_ceil(8);
+        };
+
+        // let byte_boundary_panic_stmt: syn::Stmt = syn::parse_quote! {
+        //     #byte_offset_low_stmt
+        //     #byte_offset_high_stmt
+        //     if (byte_offset_high - byte_offset_low) > #ty::width() {
+        //         panic!("Byte slice sizes greater than type width is not currently supported");
+        //     }
+        // };
+
+        // let bit_mask: syn::Stmt = syn::parse_quote! {};
 
         let field_get: syn::ItemImpl = syn::parse_quote! {
             impl #generics #ident #generics #where_clause {
-                pub fn #field_get_name(&self) -> #ty {
+                pub fn #field_get_fn_name(&self) -> #ty {
                     // 0 #( + #summed_fields::width() )*
                     self.#name
+                }
+
+                pub fn #field_meta_fn_name(&self) -> (usize, usize, usize, usize) {
+                    #bit_offset_low_stmt
+                    #bit_offset_high_stmt
+                    #byte_offset_low_stmt
+                    #byte_offset_high_stmt
+                    (bit_offset_low, bit_offset_high, byte_offset_low, byte_offset_high)
                 }
             }
         };
 
+        summed_fields.push(ty.clone());
         gen_methods.push(field_get);
     }
 

@@ -13,3 +13,4 @@ arbitrary-int = "2.0.0"
 num = "0.4.3"
 quote = "1.0.42"
 syn = {version = "2.0.111", features = ["full"]}
+funty = "2.0.0"

@@ -1,6 +1,6 @@
-//  #[derive(Protocol)]
+//  #[derive(Zora)]
 //  struct Ipv4 {
-//      #[field]
+//      #[zora(field = true)]
 //      version: u4,
 //
 //      #[field]
@@ -27,7 +27,7 @@
 //      #[field]
 //      ttl: u8,
 //
-//      #[field]
+//      #[zora(decoder_table)]
 //      protocol: u8,
 //
 //      #[field]
@@ -74,13 +74,13 @@ fn integ() {
         identification: u16,
 
         #[field(hidden = true)]
-        reserved: bool,
+        reserved: u1,
 
         #[field]
-        dont_frag: bool,
+        dont_frag: u1,
 
         #[field]
-        more_frags: bool,
+        more_frags: u1,
 
         #[field]
         frag_offset: u13,
@@ -113,5 +113,6 @@ fn integ() {
     let p = Ipv4::default();
     println!("{}", p.version());
     println!("{}", p.ihl());
+    println!("{:?}", p.__ihl_metadata());
     println!("Ipv4::total_width() = {}", Ipv4::total_width());
 }

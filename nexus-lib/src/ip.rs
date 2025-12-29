@@ -270,6 +270,7 @@ impl<'a> Ip<'a> {
     }
 
     pub fn frag_offset(&self) -> u16 {
+        todo!();
         parse_bytes::<u16>(
             &self.header[IPV4_FRAG_FLAG_OFFSET..IPV4_TTL_OFFSET],
             Endian::Big,
@@ -277,6 +278,7 @@ impl<'a> Ip<'a> {
     }
 
     pub fn set_frag_offset(&mut self, offset: u16) {
+        todo!();
         self.header.to_mut()[IPV4_FRAG_FLAG_OFFSET..IPV4_TTL_OFFSET]
             .copy_from_slice(&offset.to_be_bytes());
     }
