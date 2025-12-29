@@ -1,8 +1,8 @@
 use chrono::DateTime;
-use nexus_lib::ethernet::Ethernet;
-use nexus_lib::ip::Ip;
-use nexus_lib::pdu::{Pdu, deserialize};
-use nexus_lib::utils::printable_ascii;
+use nexus::ethernet::Ethernet;
+use nexus::ip::Ip;
+use nexus::pdu::{Pdu, deserialize};
+use nexus::utils::printable_ascii;
 use pcap::Capture;
 
 fn main() {
